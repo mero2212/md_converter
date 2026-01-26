@@ -1,5 +1,14 @@
 # Markdown to DOCX Converter
 
+> **Status**
+>
+> This is a personal utility project.
+>
+> - Public for transparency and reference
+> - Local / offline usage only
+> - No support, no issue tracking, no feature requests
+> - Provided as-is, without warranty
+
 Ein lokales Konvertierungstool, das Markdown-Dateien (.md) zuverlässig in Word-Dokumente (.docx) umwandelt.
 
 ## Features
@@ -461,10 +470,12 @@ python cli.py --batch ./docs ./output --formats docx,pdf --recursive
 - Logging auf INFO/ERROR-Level
 - Unit-Tests für Kernlogik
 
-### Erweiterungen (geplant)
+### Erweiterungen
+
+Diese Liste dient nur als technische Gedankenstütze.
+Es besteht kein Anspruch auf Umsetzung oder Weiterentwicklung.
 
 - GUI-Interface
-- PDF-Export
 - Installer / Packaging
 - Config-YAML Support (optional)
 
@@ -498,6 +509,8 @@ Alle neuen Features sind optional und brechen bestehende Workflows nicht.
 - Automatische Behandlung von Output-Namenskollisionen
 - Eindeutige Dateinamen werden automatisch generiert (`name.docx`, `name_2.docx`, etc.)
 
-## Lizenz
+## License
 
-Dieses Projekt ist für den lokalen Gebrauch entwickelt worden.
+MIT License
+
+This software is provided "as is", without warranty of any kind.
