@@ -1,0 +1,8 @@
+# Runtime dependencies
+streamlit>=1.30.0
+
+# Testing dependencies
+pytest>=7.0.0
+
+# This tool uses Pandoc as an external dependency
+# Install Pandoc separately: https://pandoc.org/installing.html
