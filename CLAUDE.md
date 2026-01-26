@@ -11,21 +11,25 @@ A Python CLI tool that converts Markdown files to Word (.docx) and PDF formats u
 ## Common Commands
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install as editable package (recommended)
+pip install -e .
+
+# After installation, use short commands:
+mdconv input.md output.docx
+mdconv-ui
+
+# Or without installation:
+python cli.py input.md output.docx
+streamlit run ui_app.py
+
+# Windows batch files (no installation needed):
+convert input.md output.docx
+ui
 
 # Run tests
 pytest
 pytest -v                           # verbose
 pytest tests/test_frontmatter.py    # single test file
-
-# CLI usage
-python cli.py input.md output.docx
-python cli.py input.md output.pdf --format pdf
-python cli.py --batch input_folder output_folder --recursive
-
-# Start Streamlit UI
-streamlit run ui_app.py
 ```
 
 ## Architecture

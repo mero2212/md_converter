@@ -15,26 +15,44 @@ class Profile:
     def __init__(
         self,
         name: str,
+        display_name: Optional[str] = None,
+        description: Optional[str] = None,
         default_template: Optional[str] = None,
         pandoc_args: Optional[List[str]] = None,
         output_naming: Optional[str] = None,
         default_formats: Optional[List[str]] = None,
+        toc: bool = False,
+        number_sections: bool = False,
     ):
         """
         Initialize a profile.
 
         Args:
-            name: Profile name.
+            name: Profile identifier (lowercase, no spaces).
+            display_name: Human-readable name for UI display.
+            description: Short description of the profile's purpose.
             default_template: Default template path (relative or absolute).
-            pandoc_args: Additional Pandoc arguments (e.g., ["--toc", "--number-sections"]).
+            pandoc_args: Additional Pandoc arguments.
             output_naming: Output naming pattern (e.g., "{title}_{version}.docx").
             default_formats: Default output formats (e.g., ["docx", "pdf"]).
+            toc: Whether to include table of contents.
+            number_sections: Whether to number sections.
         """
         self.name = name
+        self.display_name = display_name or name.capitalize()
+        self.description = description or ""
         self.default_template = default_template
-        self.pandoc_args = pandoc_args or []
         self.output_naming = output_naming
         self.default_formats = default_formats or ["docx"]
+        self.toc = toc
+        self.number_sections = number_sections
+
+        # Build pandoc_args from settings
+        self.pandoc_args = list(pandoc_args or [])
+        if toc and "--toc" not in self.pandoc_args:
+            self.pandoc_args.append("--toc")
+        if number_sections and "--number-sections" not in self.pandoc_args:
+            self.pandoc_args.append("--number-sections")
 
     def get_template_path(self, base_dir: Optional[Path] = None) -> Optional[Path]:
         """
@@ -69,21 +87,40 @@ class Profile:
 PROFILES: Dict[str, Profile] = {
     "angebot": Profile(
         name="angebot",
+        display_name="Angebot",
+        description="Angebotsdokumente mit Inhaltsverzeichnis",
         default_template=None,  # Can be set to "templates/angebot.docx"
-        pandoc_args=["--toc", "--number-sections"],
         output_naming="{title}_Angebot.docx",
+        toc=True,
+        number_sections=True,
     ),
-    "report": Profile(
-        name="report",
-        default_template=None,  # Can be set to "templates/report.docx"
-        pandoc_args=["--toc", "--number-sections", "--standalone"],
-        output_naming="{title}_Report.docx",
+    "bericht": Profile(
+        name="bericht",
+        display_name="Bericht",
+        description="Berichte und Reports mit nummerierter Gliederung",
+        default_template=None,  # Can be set to "templates/bericht.docx"
+        pandoc_args=["--standalone"],
+        output_naming="{title}_Bericht.docx",
+        toc=True,
+        number_sections=True,
     ),
-    "schulung": Profile(
-        name="schulung",
-        default_template=None,  # Can be set to "templates/schulung.docx"
-        pandoc_args=["--toc"],
-        output_naming="{title}_Schulung.docx",
+    "analyse": Profile(
+        name="analyse",
+        display_name="Analyse",
+        description="Analysedokumente mit detaillierter Struktur",
+        default_template=None,  # Can be set to "templates/analyse.docx"
+        output_naming="{title}_Analyse.docx",
+        toc=True,
+        number_sections=True,
+    ),
+    "script": Profile(
+        name="script",
+        display_name="Script",
+        description="Schulungsunterlagen und Scripts",
+        default_template=None,  # Can be set to "templates/script.docx"
+        output_naming="{title}_Script.docx",
+        toc=True,
+        number_sections=False,
     ),
 }
 
@@ -118,6 +155,23 @@ def list_profiles() -> List[str]:
         List of profile names.
     """
     return list(PROFILES.keys())
+
+
+def list_profiles_for_ui() -> List[Dict[str, str]]:
+    """
+    List all profiles with display information for UI.
+
+    Returns:
+        List of dicts with name, display_name, and description.
+    """
+    return [
+        {
+            "name": p.name,
+            "display_name": p.display_name,
+            "description": p.description,
+        }
+        for p in PROFILES.values()
+    ]
 
 
 def register_profile(profile: Profile) -> None:

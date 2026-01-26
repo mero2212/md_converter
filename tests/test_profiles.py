@@ -12,16 +12,18 @@ def test_list_profiles():
     profiles = list_profiles()
     assert isinstance(profiles, list)
     assert len(profiles) > 0
-    assert "report" in profiles
     assert "angebot" in profiles
-    assert "schulung" in profiles
+    assert "bericht" in profiles
+    assert "analyse" in profiles
+    assert "script" in profiles
 
 
 def test_get_profile_existing():
     """Test getting an existing profile."""
-    profile = get_profile("report")
+    profile = get_profile("bericht")
     assert profile is not None
-    assert profile.name == "report"
+    assert profile.name == "bericht"
+    assert profile.display_name == "Bericht"
     assert isinstance(profile.pandoc_args, list)
 
 
@@ -33,11 +35,15 @@ def test_get_profile_nonexistent():
 
 def test_profile_attributes():
     """Test profile attributes."""
-    profile = get_profile("report")
+    profile = get_profile("bericht")
     assert hasattr(profile, "name")
+    assert hasattr(profile, "display_name")
+    assert hasattr(profile, "description")
     assert hasattr(profile, "default_template")
     assert hasattr(profile, "pandoc_args")
     assert hasattr(profile, "output_naming")
+    assert hasattr(profile, "toc")
+    assert hasattr(profile, "number_sections")
 
 
 def test_profile_get_template_path():

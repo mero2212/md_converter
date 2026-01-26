@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md-converter"
+version = "1.0.0"
+description = "Convert Markdown files to Word (.docx) and PDF"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.7"
+dependencies = [
+    "streamlit>=1.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[project.scripts]
+mdconv = "cli:main"
+mdconv-ui = "ui_launcher:main"
+
+[tool.setuptools]
+py-modules = ["cli", "config", "ui_app", "ui_launcher"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["converter*"]

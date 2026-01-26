@@ -34,8 +34,8 @@ def test_cli_parser_with_profile():
     """Test CLI parser with profile option."""
     parser = cli.create_parser()
 
-    args = parser.parse_args(["input.md", "output.docx", "--profile", "report"])
-    assert args.profile == "report"
+    args = parser.parse_args(["input.md", "output.docx", "--profile", "bericht"])
+    assert args.profile == "bericht"
 
 
 def test_cli_parser_with_template():

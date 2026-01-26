@@ -80,6 +80,21 @@ Für PDF-Export wird eine **LaTeX-Distribution** benötigt:
 
 ## Installation
 
+### Option A: Als Package installieren (empfohlen)
+
+```bash
+pip install -e .
+```
+
+Danach sind die Befehle `mdconv` und `mdconv-ui` global verfügbar:
+
+```bash
+mdconv input.md output.docx
+mdconv-ui
+```
+
+### Option B: Ohne Installation
+
 1. Repository klonen oder herunterladen
 2. (Optional) Virtuelle Umgebung erstellen:
    ```bash
@@ -92,12 +107,31 @@ Für PDF-Export wird eine **LaTeX-Distribution** benötigt:
    pip install -r requirements.txt
    ```
 
-## UX starten (Streamlit)
+## Schnellstart
 
-Für eine lokale Drag&Drop-UX kann die Streamlit-App gestartet werden:
+### CLI (Kommandozeile)
 
 ```bash
-pip install -r requirements.txt
+# Nach pip install -e .
+mdconv input.md output.docx
+
+# Oder mit Batch-Datei (Windows)
+convert input.md output.docx
+
+# Oder direkt
+python cli.py input.md output.docx
+```
+
+### Web-UI (Streamlit)
+
+```bash
+# Nach pip install -e .
+mdconv-ui
+
+# Oder mit Batch-Datei (Windows)
+ui
+
+# Oder direkt
 streamlit run ui_app.py
 ```
 

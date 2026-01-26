@@ -1,72 +1,76 @@
 # ROADMAP.md
 
-Technische Verbesserungen und Refactoring-Aufgaben.
+Technische Verbesserungen und Feature-Ideen.
 
 > Diese Liste dient als interne Gedankenstütze.
 > Es besteht kein Anspruch auf Umsetzung oder Zeitplan.
 
 ---
 
-## Kritische / Hohe Priorität
+## Erledigt ✅
 
-### 1. Output-Datei-Validierung nach Pandoc-Konvertierung
-- **Datei**: `converter/pandoc_wrapper.py` (Zeilen 242-259)
-- **Problem**: Nach erfolgreicher Pandoc-Ausführung wird nicht geprüft, ob die Output-Datei existiert und Inhalt hat
-- **Risiko**: Pandoc könnte ohne Fehler laufen, aber eine leere/korrupte Datei erzeugen
-- **Lösung**: Post-Conversion-Check hinzufügen
-
-### 2. Format-Validierung extrahieren (DRY)
-- **Datei**: `cli.py` (Zeilen 169-176 und 270-277)
-- **Problem**: Identische Format-Parsing-Logik in `handle_single_conversion()` und `handle_batch_conversion()`
-- **Lösung**: Gemeinsame Hilfsfunktion `_parse_and_validate_formats()` erstellen
-
-### 3. Encoding-Fallback für Frontmatter-Parser
-- **Datei**: `converter/frontmatter.py` (Zeile 96)
-- **Problem**: Bei nicht-UTF8-Dateien crasht das Tool mit UnicodeDecodeError
-- **Lösung**: Fallback auf latin-1 oder chardet-Detection
-
-### 4. Import-Organisation korrigieren
-- **Datei**: `converter/pandoc_wrapper.py` (Zeile 96)
-- **Problem**: `import re` steht innerhalb von `_sanitize_metadata_value()` statt am Modulanfang
-- **Lösung**: Import an Modulanfang verschieben
+- [x] Output-Datei-Validierung nach Pandoc-Konvertierung
+- [x] Format-Validierung extrahieren (DRY) → `parse_formats()`
+- [x] Encoding-Fallback für Frontmatter-Parser (latin-1)
+- [x] Import-Organisation korrigieren (`import re`)
+- [x] SUPPORTED_FORMATS Konstante einführen
+- [x] Unused Imports entfernen
+- [x] Lazy Import in converter_service.py entfernt
+- [x] Entry Points für CLI (`mdconv`, `mdconv-ui`)
+- [x] Profile erweitert: display_name, description, toc, number_sections
 
 ---
 
-## Mittlere Priorität
+## Feature-Ideen
 
-### 5. SUPPORTED_FORMATS Konstante einführen
-- **Dateien**: `cli.py`, `converter/pandoc_wrapper.py`
-- **Problem**: `["docx", "pdf"]` ist an mehreren Stellen hardcoded
-- **Lösung**: Zentrale Konstante in `config.py` oder eigenem Modul
+### Logo-Integration in Kopfzeile
+- Logo-Bild pro Profil oder global konfigurierbar
+- Position: links, mitte, rechts (einstellbar)
+- Umsetzung: Pandoc-Variable + Template-Support
 
-### 6. Exception-Handling präzisieren
-- **Dateien**: `converter/converter_service.py` (Zeile 156), `converter/batch_service.py` (Zeile 175)
-- **Problem**: `except Exception` ist zu breit, fängt auch SystemExit/KeyboardInterrupt
-- **Lösung**: Spezifische Exceptions abfangen
+### Dokumentenversionierung
+- Automatische Versionsnummer aus Frontmatter
+- Revision/Status-Feld (Draft, Final, etc.)
+- Dokument-ID generieren (z.B. `DOC-2024-001`)
 
-### 7. Type Hints korrigieren
-- **Datei**: `converter/batch_service.py` (Zeile 23)
-- **Problem**: `List[Tuple[Path, str]]` aber `md_file` ist manchmal str
-- **Lösung**: Konsistente Typisierung durchsetzen
+### Erweiterte Profil-Eigenschaften
+
+| Kategorie | Eigenschaften |
+|-----------|---------------|
+| **Minimal** | Logo, Titel, Untertitel, Version, Datum, Kunde, Projekt, Output-Naming |
+| **Erweitert** | Revision, Status, Dokument-ID, TOC pro Profil, Nummerierung |
+| **Optional** | Ersteller, Tool/Build-Info, Footer-Hinweis |
+
+### Datenquellen-Trennung
+
+| Quelle | Inhalt |
+|--------|--------|
+| YAML Frontmatter | Variable Inhalte (Titel, Version, Kunde, Projekt) |
+| Profil | Layout & Regeln (Logo, TOC, Naming, Nummerierung) |
+| Tool | Defaults & Automatik (Datum, Doc-ID, Build-Info) |
+| Template | Darstellung (Position, Schrift, Stil) |
 
 ---
 
-## Niedrige Priorität
+## Technische Verbesserungen (offen)
 
-### 8. Unused Imports entfernen
-- `converter/frontmatter.py`: `date` importiert aber nicht verwendet
-- `converter/profiles.py`: `Union` importiert aber nicht verwendet
+### Mittlere Priorität
 
-### 9. Lazy Import in converter_service.py
-- **Datei**: `converter/converter_service.py` (Zeile 120)
-- **Problem**: `from converter.paths import get_output_filename` innerhalb der Funktion
-- **Lösung**: An Modulanfang verschieben (falls keine zirkuläre Abhängigkeit)
+- Exception-Handling präzisieren (`except Exception` zu breit)
+- Type Hints korrigieren in batch_service.py
 
----
-
-## Zukünftige Überlegungen (nicht priorisiert)
+### Niedrige Priorität
 
 - Enum für OutputFormat statt Strings
 - Thread-Safety für Batch-Service bei paralleler Nutzung
 - Chardet-Integration für automatische Encoding-Erkennung
 - Validierung von Pandoc-Args in Profilen
+
+---
+
+## Zukünftige Überlegungen
+
+- Config-YAML für benutzerdefinierte Profile
+- LaTeX-Template-Support für PDF
+- Installer / Packaging (PyInstaller, MSI)
+- Mehrsprachige UI
