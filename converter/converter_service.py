@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from converter.errors import ConversionError, InvalidFileError
-from converter.frontmatter import FrontmatterData, parse_frontmatter
+from converter.frontmatter import parse_frontmatter
 from converter.pandoc_wrapper import PandocWrapper
-from converter.paths import resolve_template_path
+from converter.paths import get_output_filename, resolve_template_path
 from converter.profiles import Profile, get_profile
 
 logger = logging.getLogger(__name__)
@@ -117,8 +117,6 @@ class ConverterService:
             output_file = Path(output_path)
         elif profile and profile.output_naming and frontmatter and frontmatter.title:
             # Use profile naming pattern
-            from converter.paths import get_output_filename
-
             filename = get_output_filename(
                 input_file, frontmatter.title, profile.output_naming, output_format
             )

@@ -8,14 +8,11 @@ from unittest.mock import patch, MagicMock
 from converter.pandoc_wrapper import PandocWrapper
 
 
-@patch("converter.pandoc_wrapper.subprocess")
+@patch("converter.pandoc_wrapper.subprocess.run")
 @patch("converter.pandoc_wrapper.shutil")
-def test_metadata_newlines_removed(mock_shutil, mock_subprocess):
+def test_metadata_newlines_removed(mock_shutil, mock_run):
     """Test that newlines in metadata values are removed."""
     mock_shutil.which.return_value = "/usr/bin/pandoc"
-    mock_subprocess.run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
 
     wrapper = PandocWrapper()
 
@@ -26,6 +23,13 @@ def test_metadata_newlines_removed(mock_shutil, mock_subprocess):
 
     try:
         output_file = Path(f.name).with_suffix(".docx")
+
+        # Create output file to pass validation
+        def create_output(*args, **kwargs):
+            output_file.write_text("dummy content")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = create_output
 
         metadata = {
             "title": "Test\nDocument",
@@ -40,7 +44,7 @@ def test_metadata_newlines_removed(mock_shutil, mock_subprocess):
         )
 
         # Verify metadata was sanitized (no newlines in command)
-        call_args = mock_subprocess.run.call_args[0][0]
+        call_args = mock_run.call_args[0][0]
         metadata_args = [
             arg for i, arg in enumerate(call_args) if i > 0 and call_args[i - 1] == "-V"
         ]
@@ -56,16 +60,14 @@ def test_metadata_newlines_removed(mock_shutil, mock_subprocess):
 
     finally:
         input_file.unlink(missing_ok=True)
+        output_file.unlink(missing_ok=True)
 
 
-@patch("converter.pandoc_wrapper.subprocess")
+@patch("converter.pandoc_wrapper.subprocess.run")
 @patch("converter.pandoc_wrapper.shutil")
-def test_metadata_empty_values_skipped(mock_shutil, mock_subprocess):
+def test_metadata_empty_values_skipped(mock_shutil, mock_run):
     """Test that empty metadata values are not passed to Pandoc."""
     mock_shutil.which.return_value = "/usr/bin/pandoc"
-    mock_subprocess.run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
 
     wrapper = PandocWrapper()
 
@@ -76,6 +78,13 @@ def test_metadata_empty_values_skipped(mock_shutil, mock_subprocess):
 
     try:
         output_file = Path(f.name).with_suffix(".docx")
+
+        # Create output file to pass validation
+        def create_output(*args, **kwargs):
+            output_file.write_text("dummy content")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = create_output
 
         metadata = {
             "title": "Valid Title",
@@ -92,7 +101,7 @@ def test_metadata_empty_values_skipped(mock_shutil, mock_subprocess):
         )
 
         # Verify only non-empty metadata was passed
-        call_args = mock_subprocess.run.call_args[0][0]
+        call_args = mock_run.call_args[0][0]
         metadata_pairs = []
         for i, arg in enumerate(call_args):
             if arg == "-V" and i + 1 < len(call_args):
@@ -107,16 +116,14 @@ def test_metadata_empty_values_skipped(mock_shutil, mock_subprocess):
 
     finally:
         input_file.unlink(missing_ok=True)
+        output_file.unlink(missing_ok=True)
 
 
-@patch("converter.pandoc_wrapper.subprocess")
+@patch("converter.pandoc_wrapper.subprocess.run")
 @patch("converter.pandoc_wrapper.shutil")
-def test_metadata_trimmed(mock_shutil, mock_subprocess):
+def test_metadata_trimmed(mock_shutil, mock_run):
     """Test that metadata values are trimmed."""
     mock_shutil.which.return_value = "/usr/bin/pandoc"
-    mock_subprocess.run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
 
     wrapper = PandocWrapper()
 
@@ -127,6 +134,13 @@ def test_metadata_trimmed(mock_shutil, mock_subprocess):
 
     try:
         output_file = Path(f.name).with_suffix(".docx")
+
+        # Create output file to pass validation
+        def create_output(*args, **kwargs):
+            output_file.write_text("dummy content")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = create_output
 
         metadata = {
             "title": "  Padded Title  ",
@@ -140,7 +154,7 @@ def test_metadata_trimmed(mock_shutil, mock_subprocess):
         )
 
         # Verify metadata was trimmed
-        call_args = mock_subprocess.run.call_args[0][0]
+        call_args = mock_run.call_args[0][0]
         metadata_pairs = []
         for i, arg in enumerate(call_args):
             if arg == "-V" and i + 1 < len(call_args):
@@ -152,6 +166,7 @@ def test_metadata_trimmed(mock_shutil, mock_subprocess):
 
     finally:
         input_file.unlink(missing_ok=True)
+        output_file.unlink(missing_ok=True)
 
 
 def test_sanitize_metadata_value():

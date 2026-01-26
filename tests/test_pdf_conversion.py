@@ -9,18 +9,14 @@ from converter.errors import PDFEngineNotFoundError
 from converter.pandoc_wrapper import PandocWrapper
 
 
-@patch("converter.pandoc_wrapper.subprocess")
+@patch("converter.pandoc_wrapper.subprocess.run")
 @patch("converter.pandoc_wrapper.shutil")
-def test_convert_to_pdf(mock_shutil, mock_subprocess):
+def test_convert_to_pdf(mock_shutil, mock_run):
     """Test converting Markdown to PDF."""
     mock_shutil.which.side_effect = lambda cmd: {
         "pandoc": "/usr/bin/pandoc",
         "xelatex": "/usr/bin/xelatex",
     }.get(cmd)
-
-    mock_subprocess.run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
 
     wrapper = PandocWrapper()
 
@@ -32,6 +28,13 @@ def test_convert_to_pdf(mock_shutil, mock_subprocess):
     try:
         output_file = Path(f.name).with_suffix(".pdf")
 
+        # Create output file to pass validation
+        def create_output(*args, **kwargs):
+            output_file.write_text("dummy content")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = create_output
+
         wrapper.convert(
             input_file=input_file,
             output_file=output_file,
@@ -39,8 +42,8 @@ def test_convert_to_pdf(mock_shutil, mock_subprocess):
         )
 
         # Verify pandoc was called with correct arguments
-        mock_subprocess.run.assert_called_once()
-        call_args = mock_subprocess.run.call_args[0][0]
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args[0][0]
         assert "--pdf-engine" in call_args
         assert "xelatex" in call_args
         assert "-t" in call_args
@@ -48,6 +51,7 @@ def test_convert_to_pdf(mock_shutil, mock_subprocess):
 
     finally:
         input_file.unlink(missing_ok=True)
+        output_file.unlink(missing_ok=True)
 
 
 @patch("converter.pandoc_wrapper.shutil")
@@ -78,18 +82,14 @@ def test_convert_to_pdf_no_engine(mock_shutil):
         input_file.unlink(missing_ok=True)
 
 
-@patch("converter.pandoc_wrapper.subprocess")
+@patch("converter.pandoc_wrapper.subprocess.run")
 @patch("converter.pandoc_wrapper.shutil")
-def test_convert_to_pdf_with_metadata(mock_shutil, mock_subprocess):
+def test_convert_to_pdf_with_metadata(mock_shutil, mock_run):
     """Test PDF conversion with metadata."""
     mock_shutil.which.side_effect = lambda cmd: {
         "pandoc": "/usr/bin/pandoc",
         "xelatex": "/usr/bin/xelatex",
     }.get(cmd)
-
-    mock_subprocess.run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
 
     wrapper = PandocWrapper()
 
@@ -101,6 +101,13 @@ def test_convert_to_pdf_with_metadata(mock_shutil, mock_subprocess):
     try:
         output_file = Path(f.name).with_suffix(".pdf")
 
+        # Create output file to pass validation
+        def create_output(*args, **kwargs):
+            output_file.write_text("dummy content")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = create_output
+
         wrapper.convert(
             input_file=input_file,
             output_file=output_file,
@@ -109,7 +116,7 @@ def test_convert_to_pdf_with_metadata(mock_shutil, mock_subprocess):
         )
 
         # Verify metadata was passed
-        call_args = mock_subprocess.run.call_args[0][0]
+        call_args = mock_run.call_args[0][0]
         assert "-V" in call_args
         assert "title=Test Document" in call_args or any(
             "title=Test Document" in str(arg) for arg in call_args
@@ -117,20 +124,17 @@ def test_convert_to_pdf_with_metadata(mock_shutil, mock_subprocess):
 
     finally:
         input_file.unlink(missing_ok=True)
+        output_file.unlink(missing_ok=True)
 
 
-@patch("converter.pandoc_wrapper.subprocess")
+@patch("converter.pandoc_wrapper.subprocess.run")
 @patch("converter.pandoc_wrapper.shutil")
-def test_convert_to_pdf_no_template(mock_shutil, mock_subprocess):
+def test_convert_to_pdf_no_template(mock_shutil, mock_run):
     """Test PDF conversion ignores template (templates not supported for PDF yet)."""
     mock_shutil.which.side_effect = lambda cmd: {
         "pandoc": "/usr/bin/pandoc",
         "xelatex": "/usr/bin/xelatex",
     }.get(cmd)
-
-    mock_subprocess.run.return_value = MagicMock(
-        returncode=0, stdout="", stderr=""
-    )
 
     wrapper = PandocWrapper()
 
@@ -143,6 +147,13 @@ def test_convert_to_pdf_no_template(mock_shutil, mock_subprocess):
         output_file = Path(f.name).with_suffix(".pdf")
         template_file = Path("template.docx")
 
+        # Create output file to pass validation
+        def create_output(*args, **kwargs):
+            output_file.write_text("dummy content")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = create_output
+
         wrapper.convert(
             input_file=input_file,
             output_file=output_file,
@@ -151,7 +162,7 @@ def test_convert_to_pdf_no_template(mock_shutil, mock_subprocess):
         )
 
         # Verify --reference-doc is NOT in call args for PDF
-        call_args = mock_subprocess.run.call_args[0][0]
+        call_args = mock_run.call_args[0][0]
         assert "--reference-doc" not in call_args
 
         # Verify that template warning was logged (check via mock)
@@ -160,3 +171,4 @@ def test_convert_to_pdf_no_template(mock_shutil, mock_subprocess):
 
     finally:
         input_file.unlink(missing_ok=True)
+        output_file.unlink(missing_ok=True)

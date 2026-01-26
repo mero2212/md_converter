@@ -1,6 +1,7 @@
 """Wrapper for Pandoc command-line tool."""
 
 import logging
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -93,7 +94,6 @@ class PandocWrapper:
         value = value.replace("\n", " ").replace("\r", " ")
 
         # Normalize multiple spaces to single space
-        import re
         value = re.sub(r" +", " ", value)
 
         # Trim whitespace
@@ -246,6 +246,17 @@ class PandocWrapper:
                 text=True,
                 check=True,
             )
+
+            # Validate output file was created and has content
+            if not output_file.exists():
+                raise ConversionError(
+                    f"Pandoc completed but output file was not created: {output_file}"
+                )
+            if output_file.stat().st_size == 0:
+                raise ConversionError(
+                    f"Pandoc completed but output file is empty: {output_file}"
+                )
+
             logger.info("Conversion completed successfully")
             if result.stdout:
                 logger.debug(f"Pandoc stdout: {result.stdout}")

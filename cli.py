@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 from config import DEFAULT_TEMPLATE, PANDOC_PATH
 from converter.batch_service import BatchService
@@ -26,6 +27,32 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Supported output formats
+SUPPORTED_FORMATS = ["docx", "pdf"]
+
+
+def parse_formats(
+    formats_str: Optional[str], default_format: str
+) -> Tuple[Optional[List[str]], Optional[str]]:
+    """
+    Parse and validate format string.
+
+    Args:
+        formats_str: Comma-separated format string (e.g., "docx,pdf") or None.
+        default_format: Default format to use if formats_str is None.
+
+    Returns:
+        Tuple of (list of valid formats, error message or None).
+        If error_message is not None, the formats list should be ignored.
+    """
+    if formats_str:
+        formats = [f.strip().lower() for f in formats_str.split(",")]
+        formats = [f for f in formats if f in SUPPORTED_FORMATS]
+        if not formats:
+            return None, f"--formats must contain at least one valid format ({', '.join(SUPPORTED_FORMATS)})"
+        return formats, None
+    return [default_format], None
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -99,7 +126,7 @@ Examples:
     parser.add_argument(
         "--format",
         type=str,
-        choices=["docx", "pdf"],
+        choices=SUPPORTED_FORMATS,
         default="docx",
         help="Output format (default: docx)",
     )
@@ -164,16 +191,11 @@ def handle_single_conversion(args: argparse.Namespace) -> int:
         print("✗ Error: Both input and output paths are required in single mode", file=sys.stderr)
         return 1
 
-    # Parse formats if --formats is specified
-    formats = None
-    if args.formats:
-        formats = [f.strip().lower() for f in args.formats.split(",")]
-        formats = [f for f in formats if f in ["docx", "pdf"]]
-        if not formats:
-            print("✗ Error: --formats must contain at least one valid format (docx, pdf)", file=sys.stderr)
-            return 1
-    else:
-        formats = [args.format]
+    # Parse and validate formats
+    formats, error = parse_formats(args.formats, args.format)
+    if error:
+        print(f"✗ Error: {error}", file=sys.stderr)
+        return 1
 
     try:
         converter = ConverterService(pandoc_path=args.pandoc_path)
@@ -265,16 +287,11 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
     input_dir = Path(args.input)
     output_dir = Path(args.output)
 
-    # Parse formats
-    formats = None
-    if args.formats:
-        formats = [f.strip().lower() for f in args.formats.split(",")]
-        formats = [f for f in formats if f in ["docx", "pdf"]]
-        if not formats:
-            print("✗ Error: --formats must contain at least one valid format (docx, pdf)", file=sys.stderr)
-            return 1
-    elif args.format:
-        formats = [args.format]
+    # Parse and validate formats
+    formats, error = parse_formats(args.formats, args.format)
+    if error:
+        print(f"✗ Error: {error}", file=sys.stderr)
+        return 1
 
     try:
         converter = ConverterService(pandoc_path=args.pandoc_path)

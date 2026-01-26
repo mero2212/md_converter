@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -94,6 +94,15 @@ def parse_frontmatter(file_path: Path) -> Tuple[Optional[FrontmatterData], str]:
     """
     try:
         content = file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        # Fallback to latin-1 for non-UTF8 files
+        logger.warning(
+            f"UTF-8 decoding failed for {file_path}, trying latin-1 encoding"
+        )
+        try:
+            content = file_path.read_text(encoding="latin-1")
+        except Exception as e:
+            raise FrontmatterError(f"Cannot read file with any encoding: {e}") from e
     except Exception as e:
         raise FrontmatterError(f"Cannot read file: {e}") from e
 
@@ -217,7 +226,7 @@ def _validate_frontmatter(data: Dict[str, str]) -> Dict[str, str]:
                     validated[key] = value
             else:
                 # Empty date -> use today
-                validated[key] = date.today().isoformat()
+                validated[key] = datetime.now().strftime("%Y-%m-%d")
         else:
             validated[key] = value
 
