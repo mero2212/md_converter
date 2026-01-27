@@ -205,3 +205,28 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ============================================
+# Local/Private Data (NOT for GitHub)
+# ============================================
+# This directory contains company-specific data:
+# - Logos, templates, custom profiles
+# - Company names, version numbers
+# - Any sensitive/proprietary content
+local/
+private/
+
+# Local configuration overrides
+local_config.py
+local_profiles.py
+
+# Company templates
+templates/*.docx
+templates/*.pdf
+!templates/.gitkeep
+
+# Output files
+output/
+*.docx
+*.pdf
+!examples/*.md

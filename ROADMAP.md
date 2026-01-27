@@ -18,6 +18,34 @@ Technische Verbesserungen und Feature-Ideen.
 - [x] Lazy Import in converter_service.py entfernt
 - [x] Entry Points für CLI (`mdconv`, `mdconv-ui`)
 - [x] Profile erweitert: display_name, description, toc, number_sections
+- [x] Lokale Daten von Git getrennt (`local/`, `local_profiles.py`)
+
+---
+
+## Lokale Daten (nicht auf GitHub)
+
+Firmenspezifische Daten bleiben lokal und werden nicht veröffentlicht:
+
+```
+local/                    # Gitignored
+├── templates/            # DOCX Templates mit Logo
+├── logos/                # Firmenlogos
+└── README.md             # Anleitung
+
+local_profiles.py         # Eigene Profile (gitignored)
+local_profiles.py.example # Vorlage (im Repo)
+templates/                # Platzhalter für Templates
+```
+
+### Was bleibt lokal?
+
+| Lokal (privat) | GitHub (öffentlich) |
+|----------------|---------------------|
+| Firmenlogo | Code & Logik |
+| Corporate Templates | Standard-Profile |
+| Kundennamen | Beispieldateien |
+| Versionsnummern | Dokumentation |
+| Eigene Profile | Tests |
 
 ---
 

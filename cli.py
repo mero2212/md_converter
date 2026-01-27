@@ -28,6 +28,13 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Load local profiles if available (not tracked by git)
+try:
+    import local_profiles  # noqa: F401
+    logger.debug("Local profiles loaded successfully")
+except ImportError:
+    pass  # No local profiles defined - this is fine
+
 # Supported output formats
 SUPPORTED_FORMATS = ["docx", "pdf"]
 

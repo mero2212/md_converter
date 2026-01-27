@@ -1,0 +1,47 @@
+"""
+Beispiel für lokale Profil-Definitionen.
+
+Kopiere diese Datei nach `local_profiles.py` und passe sie an.
+Die Datei `local_profiles.py` wird NICHT auf GitHub veröffentlicht.
+
+Verwendung:
+    1. Kopiere: cp local_profiles.py.example local_profiles.py
+    2. Passe die Profile an deine Bedürfnisse an
+    3. Die Profile werden automatisch beim Start geladen
+"""
+
+from converter.profiles import Profile, register_profile
+
+# Beispiel: Firmenspezifisches Angebots-Profil
+MEINE_FIRMA_ANGEBOT = Profile(
+    name="firma_angebot",
+    display_name="Meine Firma - Angebot",
+    description="Angebote mit Firmenlogo und Corporate Design",
+    default_template="local/templates/angebot.docx",
+    output_naming="{title}_Angebot_v{version}.docx",
+    toc=True,
+    number_sections=True,
+)
+
+# Beispiel: Interner Bericht
+INTERNER_BERICHT = Profile(
+    name="intern_bericht",
+    display_name="Interner Bericht",
+    description="Vertrauliche Berichte (nicht für Kunden)",
+    default_template="local/templates/intern.docx",
+    output_naming="{title}_INTERN_{date}.docx",
+    toc=True,
+    number_sections=True,
+)
+
+
+def register_local_profiles():
+    """Registriert alle lokalen Profile."""
+    register_profile(MEINE_FIRMA_ANGEBOT)
+    register_profile(INTERNER_BERICHT)
+    # Weitere Profile hier hinzufügen...
+
+
+# Automatisch registrieren beim Import
+if __name__ != "__main__":
+    register_local_profiles()
