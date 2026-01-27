@@ -53,11 +53,26 @@ def parse_formats(
         Tuple of (list of valid formats, error message or None).
         If error_message is not None, the formats list should be ignored.
     """
-    if formats_str:
-        formats = [f.strip().lower() for f in formats_str.split(",")]
-        formats = [f for f in formats if f in SUPPORTED_FORMATS]
+    if formats_str is not None and formats_str.strip() != "":
+        raw_formats = [f.strip().lower() for f in formats_str.split(",")]
+        # Filter out empty entries from extra commas/whitespace
+        raw_formats = [f for f in raw_formats if f]
+
+        invalid_formats = [f for f in raw_formats if f not in SUPPORTED_FORMATS]
+        if invalid_formats:
+            return (
+                None,
+                f"--formats contains invalid value(s): {', '.join(invalid_formats)}. "
+                f"Valid formats: {', '.join(SUPPORTED_FORMATS)}",
+            )
+
+        formats = [f for f in raw_formats if f in SUPPORTED_FORMATS]
         if not formats:
-            return None, f"--formats must contain at least one valid format ({', '.join(SUPPORTED_FORMATS)})"
+            return (
+                None,
+                f"--formats must contain at least one valid format "
+                f"({', '.join(SUPPORTED_FORMATS)})",
+            )
         # Deduplicate while preserving order (first occurrence wins)
         seen = set()
         deduplicated = []
@@ -211,6 +226,11 @@ def handle_single_conversion(args: argparse.Namespace) -> int:
         print(f"✗ Error: {error}", file=sys.stderr)
         return 1
 
+    output_path = Path(args.output)
+    if output_path.exists() and output_path.is_dir():
+        print("✗ Error: Output path must be a file, not a directory", file=sys.stderr)
+        return 1
+
     try:
         converter = ConverterService(pandoc_path=args.pandoc_path)
 
@@ -305,6 +325,24 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
     formats, error = parse_formats(args.formats, args.format)
     if error:
         print(f"✗ Error: {error}", file=sys.stderr)
+        return 1
+
+    if not input_dir.exists():
+        print(f"✗ Error: Input directory does not exist: {input_dir}", file=sys.stderr)
+        return 1
+
+    if not input_dir.is_dir():
+        print(f"✗ Error: Input path is not a directory: {input_dir}", file=sys.stderr)
+        return 1
+
+    if output_dir.exists() and not output_dir.is_dir():
+        print(f"✗ Error: Output path is not a directory: {output_dir}", file=sys.stderr)
+        return 1
+
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"✗ Error: Cannot create output directory: {e}", file=sys.stderr)
         return 1
 
     try:

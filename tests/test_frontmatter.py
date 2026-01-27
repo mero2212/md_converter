@@ -122,7 +122,7 @@ def test_parse_frontmatter_malformed():
     """Test parsing malformed frontmatter."""
     content = """---
 title: Test
-invalid yaml: [unclosed
+- item
 ---
 
 # Content
@@ -134,10 +134,8 @@ invalid yaml: [unclosed
         file_path = Path(f.name)
 
     try:
-        # Should not raise, but may parse partially or ignore invalid parts
-        frontmatter, remaining = parse_frontmatter(file_path)
-        # Parser is lenient, so it should still work
-        assert frontmatter is not None or frontmatter is None
+        with pytest.raises(FrontmatterError):
+            parse_frontmatter(file_path)
     finally:
         file_path.unlink()
 
@@ -160,6 +158,61 @@ title: Test
         # Should treat as no frontmatter
         assert frontmatter is None
         assert remaining == content
+    finally:
+        file_path.unlink()
+
+
+def test_parse_frontmatter_with_bom_and_crlf():
+    """Test parsing frontmatter with UTF-8 BOM and CRLF line endings."""
+    content = "\ufeff---\r\n" \
+        "title: BOM Test\r\n" \
+        "author: Jane Doe\r\n" \
+        "---\r\n" \
+        "\r\n" \
+        "# Content\r\n" \
+        "Body\r\n"
+
+    with NamedTemporaryFile(
+        mode="w", suffix=".md", delete=False, newline="", encoding="utf-8"
+    ) as f:
+        f.write(content)
+        f.flush()
+        file_path = Path(f.name)
+
+    try:
+        frontmatter, remaining = parse_frontmatter(file_path)
+        assert frontmatter is not None
+        assert frontmatter.title == "BOM Test"
+        assert frontmatter.author == "Jane Doe"
+        assert "# Content" in remaining
+        assert "Body" in remaining
+    finally:
+        file_path.unlink()
+
+
+def test_parse_frontmatter_empty_values():
+    """Test parsing frontmatter with empty values."""
+    content = """---
+title:
+author: ""
+version: "  "
+---
+
+# Content
+"""
+
+    with NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+        f.write(content)
+        f.flush()
+        file_path = Path(f.name)
+
+    try:
+        frontmatter, _ = parse_frontmatter(file_path)
+        assert frontmatter is not None
+        # Empty values should be ignored for non-date fields
+        assert frontmatter.title is None
+        assert frontmatter.author is None
+        assert frontmatter.version is None
     finally:
         file_path.unlink()
 

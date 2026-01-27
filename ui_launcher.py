@@ -5,11 +5,19 @@ import sys
 from pathlib import Path
 
 
-def main():
-    """Launch the Streamlit UI."""
+def main() -> int:
+    """
+    Launch the Streamlit UI.
+
+    Returns:
+        Exit code (0 for success, non-zero for error).
+    """
     ui_app = Path(__file__).parent / "ui_app.py"
-    subprocess.run([sys.executable, "-m", "streamlit", "run", str(ui_app)])
+    result = subprocess.run(
+        [sys.executable, "-m", "streamlit", "run", str(ui_app)]
+    )
+    return result.returncode
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

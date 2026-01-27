@@ -30,20 +30,21 @@ ui
 pytest
 pytest -v                           # verbose
 pytest tests/test_frontmatter.py    # single test file
+pytest tests/test_frontmatter.py::test_parse_valid_frontmatter  # single test
 ```
 
 ## Architecture
 
 ### Core Components
 
-- **cli.py** - Entry point, argument parsing, dispatches to single/batch handlers
+- **cli.py** - Entry point, argument parsing, dispatches to single/batch handlers. Contains `SUPPORTED_FORMATS` constant and `parse_formats()` helper.
 - **converter/converter_service.py** - Main conversion orchestration: validates input, parses frontmatter, resolves profiles/templates, calls PandocWrapper
-- **converter/pandoc_wrapper.py** - Executes Pandoc subprocess, handles PDF engine detection, sanitizes metadata
+- **converter/pandoc_wrapper.py** - Executes Pandoc subprocess, handles PDF engine detection, sanitizes metadata, validates output file creation
 - **converter/batch_service.py** - Iterates directories, handles filename collisions, aggregates results
-- **converter/frontmatter.py** - Parses YAML frontmatter from Markdown (custom parser, no PyYAML dependency)
-- **converter/profiles.py** - Preset profiles (angebot, report, schulung) with default Pandoc args and naming patterns
+- **converter/frontmatter.py** - Parses YAML frontmatter from Markdown (custom parser, no PyYAML dependency, with UTF-8/latin-1 fallback)
+- **converter/profiles.py** - Preset profiles (angebot, bericht, analyse, script) with default Pandoc args, templates, and naming patterns
 - **converter/paths.py** - Slugify, output filename generation, template path resolution
-- **converter/errors.py** - Exception hierarchy (ConverterError base, specific errors for Pandoc, PDF engine, frontmatter, etc.)
+- **converter/errors.py** - Exception hierarchy (ConverterError base, specific errors for Pandoc, PDF engine, frontmatter, profile, etc.)
 
 ### Data Flow
 
@@ -51,23 +52,37 @@ pytest tests/test_frontmatter.py    # single test file
 2. ConverterService reads input, parses frontmatter, resolves profile/template
 3. Merges metadata (explicit overrides frontmatter)
 4. PandocWrapper builds command and executes subprocess
-5. For batch: BatchService iterates files, tracks collisions, returns BatchResult
+5. Validates output file was created and has content
+6. For batch: BatchService iterates files, tracks collisions, returns BatchResult
 
 ### Key Design Patterns
 
 - **Metadata precedence**: CLI args > frontmatter values
-- **Profile system**: Profiles define default templates, Pandoc args (--toc, --number-sections), and output naming patterns
+- **Profile system**: Profiles define default templates, Pandoc args (--toc, --number-sections), and output naming patterns. Templates resolve from `local/templates/`.
 - **Collision handling**: Batch mode auto-generates unique names (name.docx, name_2.docx, etc.)
 - **PDF engine detection**: Tries xelatex → lualatex → pdflatex in order
 
+## Local vs Public Data
+
+Company-specific data is gitignored and stays local:
+
+```
+local/                         # Gitignored - company templates and logos
+local_profiles.py              # Gitignored - custom profiles (see .example)
+create_templates.py            # Gitignored - template generator with company address (see .example)
+```
+
+Custom profiles in `local_profiles.py` are auto-loaded by cli.py if present.
+
 ## Testing
 
-Tests mock Pandoc calls - no actual Pandoc installation needed to run tests. Tests cover:
-- Frontmatter parsing edge cases
-- Profile defaults and overrides
-- Batch collision handling
-- CLI argument parsing
-- PDF engine detection
+Tests mock Pandoc calls - no actual Pandoc installation needed. Mock side effects must create output files for validation tests to pass.
+
+```bash
+pytest                                    # all tests
+pytest tests/test_profiles.py -v          # specific file
+pytest -k "test_parse"                    # pattern match
+```
 
 ## Configuration
 

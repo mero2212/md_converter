@@ -252,19 +252,30 @@ class PandocWrapper:
                 raise ConversionError(
                     f"Pandoc completed but output file was not created: {output_file}"
                 )
-            if output_file.stat().st_size == 0:
+            try:
+                if output_file.stat().st_size == 0:
+                    raise ConversionError(
+                        f"Pandoc completed but output file is empty: {output_file}"
+                    )
+            except FileNotFoundError as e:
+                # Race condition: file existed at line 251 but was deleted before stat()
                 raise ConversionError(
-                    f"Pandoc completed but output file is empty: {output_file}"
-                )
+                    f"Output file was deleted after creation: {output_file}"
+                ) from e
 
             logger.info("Conversion completed successfully")
             if result.stdout:
                 logger.debug(f"Pandoc stdout: {result.stdout}")
         except subprocess.CalledProcessError as e:
-            error_msg = f"Pandoc conversion failed: {e.stderr or str(e)}"
+            stderr = (e.stderr or "").strip()
+            stdout = (e.stdout or "").strip()
+            detail = stderr or stdout or str(e)
+            error_msg = f"Pandoc conversion failed: {detail}"
             logger.error(error_msg)
             raise ConversionError(error_msg) from e
         except FileNotFoundError as e:
+            # This FileNotFoundError is from subprocess.run() when Pandoc executable is missing
+            # (not from output_file.stat() which is caught separately above)
             error_msg = f"Pandoc executable not found: {self.pandoc_path}"
             logger.error(error_msg)
             raise PandocNotFoundError(error_msg) from e

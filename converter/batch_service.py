@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from converter.converter_service import ConverterService
 from converter.errors import ConversionError
@@ -77,8 +77,16 @@ class BatchService:
         if not input_dir.is_dir():
             raise ConversionError(f"Input path is not a directory: {input_dir}")
 
+        if output_dir.exists() and not output_dir.is_dir():
+            raise ConversionError(f"Output path is not a directory: {output_dir}")
+
         # Ensure output directory exists
-        output_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise ConversionError(
+                f"Cannot create output directory '{output_dir}': {e}"
+            ) from e
 
         # Find all Markdown files
         pattern = "**/*.md" if recursive else "*.md"
@@ -97,8 +105,8 @@ class BatchService:
         logger.info(f"Found {len(md_files)} Markdown file(s) to process")
         logger.info(f"Output formats: {', '.join(formats)}")
 
-        # Track used output filenames to handle collisions
-        used_output_names: Dict[Path, int] = {}
+        # Track used output filenames to handle collisions within the batch
+        used_output_files: Set[Path] = set()
 
         for md_file in md_files:
             # Determine relative path for output structure
@@ -121,47 +129,63 @@ class BatchService:
                     )
                     base_output_file = output_subdir / base_output_filename
 
-                    # Handle filename collisions
+                    # Skip if output exists from previous run and overwrite is False
+                    if (
+                        base_output_file.exists()
+                        and not overwrite
+                        and base_output_file not in used_output_files
+                    ):
+                        logger.info(
+                            f"Skipping {md_file.name} -> {output_format} "
+                            f"(output exists: {base_output_file.name})"
+                        )
+                        result.skipped += 1
+                        continue
+
+                    # Handle filename collisions within the batch
                     output_file = base_output_file
-                    if base_output_file in used_output_names:
+                    if output_file in used_output_files:
                         # Collision detected - generate unique name
-                        # Start with base stem (without any existing counter)
                         base_stem = base_output_file.stem
                         # Remove existing counter suffix if present (e.g., "_2")
                         if "_" in base_stem and base_stem.split("_")[-1].isdigit():
                             base_stem = "_".join(base_stem.split("_")[:-1])
-                        
-                        # Start from 2 (first file uses base name, second uses _2, etc.)
+
                         counter = 2
-                        while output_file in used_output_names or (
-                            output_file.exists() and not overwrite
-                        ):
-                            output_file = output_subdir / f"{base_stem}_{counter}{base_output_file.suffix}"
+                        while True:
+                            candidate = output_subdir / f"{base_stem}_{counter}{base_output_file.suffix}"
+                            if candidate not in used_output_files and (
+                                overwrite or not candidate.exists()
+                            ):
+                                output_file = candidate
+                                break
                             counter += 1
-                        used_output_names[output_file] = 0  # Mark this file as used
                         logger.debug(
                             f"Output filename collision resolved: "
                             f"{base_output_filename} -> {output_file.name}"
                         )
-                    else:
-                        # First use of this base filename
-                        used_output_names[base_output_file] = 0
-                        used_output_names[output_file] = 0  # Mark this file as used
 
-                    # Check if output exists (per format)
-                    if output_file.exists() and not overwrite:
+                    # Check if output exists after collision resolution
+                    if output_file.exists() and not overwrite and output_file not in used_output_files:
                         logger.info(
                             f"Skipping {md_file.name} -> {output_format} "
-                            f"(output exists: {output_file})"
+                            f"(output exists: {output_file.name})"
                         )
                         result.skipped += 1
                         continue
 
                     # Ensure output subdirectory exists
-                    output_subdir.mkdir(parents=True, exist_ok=True)
+                    try:
+                        output_subdir.mkdir(parents=True, exist_ok=True)
+                    except OSError as e:
+                        raise ConversionError(
+                            f"Cannot create output subdirectory '{output_subdir}': {e}"
+                        ) from e
 
                     # Perform conversion
-                    logger.info(f"Converting {md_file} -> {output_file} ({output_format})")
+                    logger.info(
+                        f"Converting {md_file.name} -> {output_file.name} ({output_format})"
+                    )
                     self.converter.convert(
                         input_path=str(md_file),
                         output_path=str(output_file),
@@ -170,6 +194,7 @@ class BatchService:
                         output_format=output_format,
                         pdf_engine=pdf_engine,
                     )
+                    used_output_files.add(output_file)
                     result.successful += 1
 
                 except Exception as e:

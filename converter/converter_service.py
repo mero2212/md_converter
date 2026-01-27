@@ -115,6 +115,10 @@ class ConverterService:
         # Determine output path
         if output_path:
             output_file = Path(output_path)
+            if output_file.exists() and output_file.is_dir():
+                raise InvalidFileError(
+                    f"Output path must be a file, not a directory: {output_file}"
+                )
         elif profile and profile.output_naming and frontmatter and frontmatter.title:
             # Use profile naming pattern
             filename = get_output_filename(
@@ -126,7 +130,12 @@ class ConverterService:
             output_file = input_file.with_suffix(f".{output_format}")
 
         # Ensure output directory exists
-        output_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise ConversionError(
+                f"Cannot create output directory '{output_file.parent}': {e}"
+            ) from e
 
         # Collect Pandoc arguments
         pandoc_args = []
@@ -135,7 +144,10 @@ class ConverterService:
         if additional_args:
             pandoc_args.extend(additional_args)
 
-        logger.info(f"Converting {input_file} to {output_file} (format: {output_format})")
+        logger.info(
+            f"Converting {input_file.name} to {output_file.name} "
+            f"(format: {output_format})"
+        )
 
         try:
             self.pandoc_wrapper.convert(
@@ -147,7 +159,9 @@ class ConverterService:
                 additional_args=pandoc_args if pandoc_args else None,
                 pdf_engine=pdf_engine,
             )
-            logger.info(f"Successfully converted {input_file} to {output_file}")
+            logger.info(
+                f"Successfully converted {input_file.name} to {output_file.name}"
+            )
             return output_file
         except ConversionError:
             raise

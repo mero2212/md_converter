@@ -93,7 +93,7 @@ def parse_frontmatter(file_path: Path) -> Tuple[Optional[FrontmatterData], str]:
         FrontmatterError: If frontmatter is malformed.
     """
     try:
-        content = file_path.read_text(encoding="utf-8")
+        content = file_path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
         # Fallback to latin-1 for non-UTF8 files
         logger.warning(
@@ -106,12 +106,16 @@ def parse_frontmatter(file_path: Path) -> Tuple[Optional[FrontmatterData], str]:
     except Exception as e:
         raise FrontmatterError(f"Cannot read file: {e}") from e
 
+    # Remove UTF-8 BOM if present (utf-8-sig handles most cases)
+    if content.startswith("\ufeff"):
+        content = content.lstrip("\ufeff")
+
     # Check for frontmatter delimiter at start
     if not content.startswith("---"):
         return None, content
 
     # Find the closing delimiter
-    lines = content.split("\n")
+    lines = content.splitlines()
     if len(lines) < 2:
         return None, content
 
@@ -163,24 +167,26 @@ def _parse_simple_yaml(yaml_text: str) -> Dict[str, str]:
         ValueError: If YAML is malformed.
     """
     result = {}
-    for line in yaml_text.split("\n"):
-        line = line.strip()
-        if not line or line.startswith("#"):
+    for line in yaml_text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
             continue
 
         # Match key: value pattern
-        match = re.match(r"^([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.+)$", line)
-        if match:
-            key = match.group(1)
-            value = match.group(2).strip()
+        match = re.match(r"^([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.*)$", stripped)
+        if not match:
+            raise ValueError(f"Invalid frontmatter line: {line}")
 
-            # Remove quotes if present
-            if (value.startswith('"') and value.endswith('"')) or (
-                value.startswith("'") and value.endswith("'")
-            ):
-                value = value[1:-1]
+        key = match.group(1)
+        value = match.group(2).strip()
 
-            result[key] = value
+        # Remove quotes if present
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
+            value = value[1:-1]
+
+        result[key] = value
 
     return result
 
@@ -205,6 +211,8 @@ def _validate_frontmatter(data: Dict[str, str]) -> Dict[str, str]:
             continue
 
         value = data[key]
+        if isinstance(value, str):
+            value = value.strip()
 
         # Type validation
         if not isinstance(value, str):
@@ -228,6 +236,8 @@ def _validate_frontmatter(data: Dict[str, str]) -> Dict[str, str]:
                 # Empty date -> use today
                 validated[key] = datetime.now().strftime("%Y-%m-%d")
         else:
+            if value == "":
+                continue
             validated[key] = value
 
     return validated
