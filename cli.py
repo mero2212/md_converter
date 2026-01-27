@@ -58,7 +58,14 @@ def parse_formats(
         formats = [f for f in formats if f in SUPPORTED_FORMATS]
         if not formats:
             return None, f"--formats must contain at least one valid format ({', '.join(SUPPORTED_FORMATS)})"
-        return formats, None
+        # Deduplicate while preserving order (first occurrence wins)
+        seen = set()
+        deduplicated = []
+        for f in formats:
+            if f not in seen:
+                seen.add(f)
+                deduplicated.append(f)
+        return deduplicated, None
     return [default_format], None
 
 

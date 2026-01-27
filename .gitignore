@@ -219,6 +219,7 @@ private/
 # Local configuration overrides
 local_config.py
 local_profiles.py
+create_templates.py
 
 # Company templates
 templates/*.docx

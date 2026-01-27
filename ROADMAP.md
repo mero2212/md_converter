@@ -32,9 +32,11 @@ local/                    # Gitignored
 ├── logos/                # Firmenlogos
 └── README.md             # Anleitung
 
-local_profiles.py         # Eigene Profile (gitignored)
-local_profiles.py.example # Vorlage (im Repo)
-templates/                # Platzhalter für Templates
+local_profiles.py              # Eigene Profile (gitignored)
+local_profiles.py.example      # Vorlage (im Repo)
+create_templates.py            # Template-Generator mit Firmenadresse (gitignored)
+create_templates.py.example    # Vorlage (im Repo)
+templates/                     # Platzhalter für Templates
 ```
 
 ### Was bleibt lokal?

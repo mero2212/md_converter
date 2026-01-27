@@ -1,0 +1,427 @@
+"""
+Template Generator for md_converter
+Creates DOCX templates with corporate design
+
+INSTRUCTIONS:
+1. Copy this file to create_templates.py
+2. Update LOGO_PATH to point to your company logo
+3. Update FOOTER_ADDRESS with your company address
+4. Update COLORS with your corporate colors
+5. Run: python create_templates.py
+"""
+
+from pathlib import Path
+from docx import Document
+from docx.shared import Pt, Cm, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.style import WD_STYLE_TYPE
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+
+# === CONFIGURATION - CUSTOMIZE THESE VALUES ===
+TEMPLATE_DIR = Path(__file__).parent / "local" / "templates"
+LOGO_PATH = Path(__file__).parent / "local" / "logos" / "your_company_logo.png"
+
+# Corporate Design Colors - customize for your company
+COLORS = {
+    "primary": RGBColor(0x00, 0x76, 0xBE),      # #0076BE - Headings
+    "accent": RGBColor(0x33, 0x33, 0x33),       # #333333 - Accent/Text
+    "text": RGBColor(0x00, 0x00, 0x00),         # Black - Body text
+    "light_gray": RGBColor(0x66, 0x66, 0x66),   # Gray - Footer
+}
+
+FONT_NAME = "Calibri"
+
+# Footer address - customize with your company info
+FOOTER_ADDRESS = "Your Company GmbH | Street 123 | 12345 City | www.example.com"
+
+
+def set_style_font(style, name=FONT_NAME, size=11, color=None, bold=False, italic=False):
+    """Sets font properties for a style."""
+    font = style.font
+    font.name = name
+    font.size = Pt(size)
+    font.bold = bold
+    font.italic = italic
+    if color:
+        font.color.rgb = color
+
+    # Also set for Asian fonts
+    rpr = style.element.get_or_add_rPr()
+    rfonts = rpr.get_or_add_rFonts()
+    rfonts.set(qn('w:ascii'), name)
+    rfonts.set(qn('w:hAnsi'), name)
+    rfonts.set(qn('w:eastAsia'), name)
+    rfonts.set(qn('w:cs'), name)
+
+
+def set_paragraph_spacing(style, before=0, after=6, line_spacing=1.15):
+    """Sets paragraph spacing."""
+    pf = style.paragraph_format
+    pf.space_before = Pt(before)
+    pf.space_after = Pt(after)
+    pf.line_spacing = line_spacing
+
+
+def add_header_with_logo(doc, logo_path):
+    """Adds header with logo on the right."""
+    section = doc.sections[0]
+    header = section.header
+
+    # Header table for layout (1 row, 2 columns)
+    table = header.add_table(rows=1, cols=2, width=Inches(6.5))
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = True
+
+    # Left cell empty
+    left_cell = table.rows[0].cells[0]
+    left_cell.text = ""
+
+    # Right cell: Logo
+    right_cell = table.rows[0].cells[1]
+    right_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    if logo_path.exists():
+        run = right_cell.paragraphs[0].add_run()
+        run.add_picture(str(logo_path), height=Cm(1.5))
+    else:
+        right_cell.paragraphs[0].add_run("[LOGO]")
+
+    # Remove borders
+    for cell in table.rows[0].cells:
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        tcBorders = OxmlElement('w:tcBorders')
+        for border_name in ['top', 'left', 'bottom', 'right']:
+            border = OxmlElement(f'w:{border_name}')
+            border.set(qn('w:val'), 'nil')
+            tcBorders.append(border)
+        tcPr.append(tcBorders)
+
+
+def add_footer(doc, address=FOOTER_ADDRESS, confidential=True):
+    """Adds footer with page number, address and optionally 'Confidential'."""
+    section = doc.sections[0]
+    footer = section.footer
+
+    # Footer paragraph
+    p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # "Confidential" if desired
+    if confidential:
+        conf_para = footer.add_paragraph()
+        conf_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = conf_para.add_run("CONFIDENTIAL")
+        run.bold = True
+        run.font.size = Pt(8)
+        run.font.color.rgb = COLORS["accent"]
+
+    # Address
+    addr_para = footer.add_paragraph()
+    addr_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = addr_para.add_run(address)
+    run.font.size = Pt(8)
+    run.font.color.rgb = COLORS["light_gray"]
+
+    # Page number
+    page_para = footer.add_paragraph()
+    page_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = page_para.add_run("Page ")
+    run.font.size = Pt(8)
+    run.font.color.rgb = COLORS["light_gray"]
+
+    # Page number field
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+
+    instrText = OxmlElement('w:instrText')
+    instrText.text = "PAGE"
+
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+
+    run._r.append(fldChar1)
+    run._r.append(instrText)
+    run._r.append(fldChar2)
+
+    run2 = page_para.add_run(" of ")
+    run2.font.size = Pt(8)
+    run2.font.color.rgb = COLORS["light_gray"]
+
+    # Total pages field
+    fldChar3 = OxmlElement('w:fldChar')
+    fldChar3.set(qn('w:fldCharType'), 'begin')
+
+    instrText2 = OxmlElement('w:instrText')
+    instrText2.text = "NUMPAGES"
+
+    fldChar4 = OxmlElement('w:fldChar')
+    fldChar4.set(qn('w:fldCharType'), 'end')
+
+    run2._r.append(fldChar3)
+    run2._r.append(instrText2)
+    run2._r.append(fldChar4)
+
+
+def setup_base_styles(doc):
+    """Sets up all base styles."""
+    styles = doc.styles
+
+    # Normal / Body Text
+    normal = styles['Normal']
+    set_style_font(normal, size=11, color=COLORS["text"])
+    set_paragraph_spacing(normal, before=0, after=6)
+
+    # Title
+    if 'Title' in [s.name for s in styles]:
+        title = styles['Title']
+    else:
+        title = styles.add_style('Title', WD_STYLE_TYPE.PARAGRAPH)
+    set_style_font(title, size=26, color=COLORS["primary"], bold=True)
+    title.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    set_paragraph_spacing(title, before=0, after=12)
+
+    # Subtitle
+    if 'Subtitle' in [s.name for s in styles]:
+        subtitle = styles['Subtitle']
+    else:
+        subtitle = styles.add_style('Subtitle', WD_STYLE_TYPE.PARAGRAPH)
+    set_style_font(subtitle, size=14, color=COLORS["accent"], italic=True)
+    set_paragraph_spacing(subtitle, before=0, after=24)
+
+    # Heading 1
+    h1 = styles['Heading 1']
+    set_style_font(h1, size=16, color=COLORS["primary"], bold=True)
+    set_paragraph_spacing(h1, before=24, after=12)
+
+    # Heading 2
+    h2 = styles['Heading 2']
+    set_style_font(h2, size=14, color=COLORS["primary"], bold=True)
+    set_paragraph_spacing(h2, before=18, after=6)
+
+    # Heading 3
+    h3 = styles['Heading 3']
+    set_style_font(h3, size=12, color=COLORS["primary"], bold=True)
+    set_paragraph_spacing(h3, before=12, after=6)
+
+    # Heading 4
+    if 'Heading 4' in [s.name for s in styles]:
+        h4 = styles['Heading 4']
+        set_style_font(h4, size=11, color=COLORS["accent"], bold=True)
+        set_paragraph_spacing(h4, before=12, after=6)
+
+
+def setup_page_layout(doc):
+    """Sets page margins and format."""
+    section = doc.sections[0]
+    section.page_width = Cm(21.0)    # A4
+    section.page_height = Cm(29.7)
+    section.left_margin = Cm(2.5)
+    section.right_margin = Cm(2.5)
+    section.top_margin = Cm(3.0)     # Space for header
+    section.bottom_margin = Cm(2.5)
+    section.header_distance = Cm(1.0)
+    section.footer_distance = Cm(1.0)
+
+
+def create_basis_template():
+    """Creates the base template."""
+    doc = Document()
+    setup_page_layout(doc)
+    setup_base_styles(doc)
+    add_header_with_logo(doc, LOGO_PATH)
+    add_footer(doc, confidential=True)
+
+    # Placeholder content for Pandoc (ignored, but styles remain)
+    doc.add_paragraph("Title", style='Title')
+    doc.add_paragraph("Subtitle", style='Subtitle')
+    doc.add_paragraph("Heading 1", style='Heading 1')
+    doc.add_paragraph("Normal text as example.", style='Normal')
+    doc.add_paragraph("Heading 2", style='Heading 2')
+    doc.add_paragraph("More text.", style='Normal')
+
+    return doc
+
+
+def create_angebot_template():
+    """Creates the proposal template with specific styles."""
+    doc = Document()
+    setup_page_layout(doc)
+    setup_base_styles(doc)
+    add_header_with_logo(doc, LOGO_PATH)
+    add_footer(doc, confidential=True)
+
+    # Proposal-specific style: Block Text for address
+    styles = doc.styles
+    try:
+        block = styles.add_style('Block Text', WD_STYLE_TYPE.PARAGRAPH)
+        set_style_font(block, size=11, color=COLORS["text"])
+        set_paragraph_spacing(block, before=0, after=0, line_spacing=1.0)
+    except ValueError:
+        pass  # Style already exists
+
+    # Placeholder
+    doc.add_paragraph("Proposal", style='Title')
+    doc.add_paragraph("Project Title", style='Subtitle')
+    doc.add_paragraph("1. Introduction", style='Heading 1')
+    doc.add_paragraph("Description of the proposal.", style='Normal')
+    doc.add_paragraph("1.1 Scope of Services", style='Heading 2')
+    doc.add_paragraph("Details of offered services.", style='Normal')
+
+    return doc
+
+
+def create_bericht_template():
+    """Creates the report template."""
+    doc = Document()
+    setup_page_layout(doc)
+    setup_base_styles(doc)
+    add_header_with_logo(doc, LOGO_PATH)
+    add_footer(doc, confidential=True)
+
+    # Report-specific style: Abstract/Summary
+    styles = doc.styles
+    try:
+        abstract = styles.add_style('Abstract', WD_STYLE_TYPE.PARAGRAPH)
+        set_style_font(abstract, size=10, color=COLORS["accent"], italic=True)
+        abstract.paragraph_format.left_indent = Cm(1.0)
+        abstract.paragraph_format.right_indent = Cm(1.0)
+        set_paragraph_spacing(abstract, before=12, after=12)
+    except ValueError:
+        pass
+
+    # Placeholder
+    doc.add_paragraph("Technical Report", style='Title')
+    doc.add_paragraph("Summary of the report...", style='Normal')
+    doc.add_paragraph("1. Introduction", style='Heading 1')
+    doc.add_paragraph("Background and objectives.", style='Normal')
+
+    return doc
+
+
+def create_analyse_template():
+    """Creates the analysis template."""
+    doc = Document()
+    setup_page_layout(doc)
+    setup_base_styles(doc)
+    add_header_with_logo(doc, LOGO_PATH)
+    add_footer(doc, confidential=True)
+
+    # Analysis-specific style: Note box
+    styles = doc.styles
+    try:
+        note = styles.add_style('Note', WD_STYLE_TYPE.PARAGRAPH)
+        set_style_font(note, size=10, color=COLORS["accent"])
+        note.paragraph_format.left_indent = Cm(0.5)
+        note.paragraph_format.border_left = True
+        set_paragraph_spacing(note, before=6, after=6)
+    except ValueError:
+        pass
+
+    # Placeholder
+    doc.add_paragraph("Analysis", style='Title')
+    doc.add_paragraph("Subject of Investigation", style='Subtitle')
+    doc.add_paragraph("1. Methodology", style='Heading 1')
+    doc.add_paragraph("Description of analysis methods.", style='Normal')
+    doc.add_paragraph("2. Results", style='Heading 1')
+    doc.add_paragraph("Presentation of results.", style='Normal')
+    doc.add_paragraph("3. Evaluation", style='Heading 1')
+    doc.add_paragraph("Interpretation and assessment.", style='Normal')
+
+    return doc
+
+
+def create_script_template():
+    """Creates the training/script template."""
+    doc = Document()
+    setup_page_layout(doc)
+    setup_base_styles(doc)
+    add_header_with_logo(doc, LOGO_PATH)
+    add_footer(doc, confidential=True)
+
+    # Script-specific styles
+    styles = doc.styles
+
+    # Code block style
+    try:
+        code = styles.add_style('Source Code', WD_STYLE_TYPE.PARAGRAPH)
+        set_style_font(code, name='Consolas', size=9, color=COLORS["text"])
+        code.paragraph_format.left_indent = Cm(0.5)
+        set_paragraph_spacing(code, before=6, after=6, line_spacing=1.0)
+    except ValueError:
+        pass
+
+    # Exercise hint style
+    try:
+        exercise = styles.add_style('Exercise', WD_STYLE_TYPE.PARAGRAPH)
+        set_style_font(exercise, size=11, color=COLORS["primary"], bold=True)
+        exercise.paragraph_format.left_indent = Cm(0.5)
+        set_paragraph_spacing(exercise, before=12, after=6)
+    except ValueError:
+        pass
+
+    # Placeholder
+    doc.add_paragraph("Training Material", style='Title')
+    doc.add_paragraph("Course Name", style='Subtitle')
+    doc.add_paragraph("1. Learning Objectives", style='Heading 1')
+    doc.add_paragraph("After this module you will be able to...", style='Normal')
+    doc.add_paragraph("2. Theory", style='Heading 1')
+    doc.add_paragraph("Fundamentals and concepts.", style='Normal')
+    doc.add_paragraph("3. Exercises", style='Heading 1')
+    doc.add_paragraph("Practical application.", style='Normal')
+
+    return doc
+
+
+def main():
+    """Creates all templates and saves them."""
+    # Create directory if not exists
+    TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+
+    print("=" * 50)
+    print("Template Generator")
+    print("=" * 50)
+    print()
+
+    # Logo check
+    if LOGO_PATH.exists():
+        print(f"[OK] Logo found: {LOGO_PATH.name}")
+    else:
+        print(f"[!] Logo not found: {LOGO_PATH}")
+        print("    Templates will be created without logo.")
+    print()
+
+    # Create templates
+    templates = {
+        "basis.docx": create_basis_template,
+        "angebot.docx": create_angebot_template,
+        "bericht.docx": create_bericht_template,
+        "analyse.docx": create_analyse_template,
+        "script.docx": create_script_template,
+    }
+
+    for filename, creator_func in templates.items():
+        filepath = TEMPLATE_DIR / filename
+        try:
+            doc = creator_func()
+            doc.save(str(filepath))
+            print(f"[OK] Created: {filepath}")
+        except Exception as e:
+            print(f"[ERROR] {filename}: {e}")
+
+    print()
+    print("=" * 50)
+    print("Templates created in:", TEMPLATE_DIR)
+    print()
+    print("Next steps:")
+    print("1. Open templates in Word and verify")
+    print("2. Adjust styles if needed (format templates)")
+    print("3. Adjust logo position/size")
+    print("4. Update address in footer")
+    print("=" * 50)
+
+
+if __name__ == "__main__":
+    main()
