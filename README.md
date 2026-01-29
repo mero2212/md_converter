@@ -16,10 +16,11 @@ Ein lokales Konvertierungstool, das Markdown-Dateien (.md) zuverlässig in Word-
 - ✅ Konvertierung von Markdown zu Word (.docx) **und PDF**
 - ✅ Unterstützung für technische Dokumente (Überschriften, Listen, Tabellen)
 - ✅ **YAML Frontmatter** für Metadaten (Titel, Autor, Version, Datum, etc.)
-- ✅ **Preset-Profile** (angebot, report, schulung) mit konfigurierbaren Defaults
+- ✅ **Preset-Profile** (angebot, bericht, analyse, script) mit konfigurierbaren Defaults
 - ✅ **Referenz-DOCX-Templates** für Corporate-Layout
 - ✅ **Batch-Konvertierung** (Ordner → Ordner, rekursiv)
 - ✅ **Mehrfach-Format-Export** (z.B. docx + pdf in einem Durchgang)
+- ✅ **Mermaid-Diagramme** automatisch zu Bildern konvertiert
 - ✅ Optional: Verwendung von Word-Templates für konsistente Formatierung
 - ✅ Saubere Fehlermeldungen
 - ✅ Logging auf INFO/ERROR-Level
@@ -77,6 +78,21 @@ Für PDF-Export wird eine **LaTeX-Distribution** benötigt:
    ```
 
 **Hinweis**: Das Tool sucht automatisch nach verfügbaren PDF-Engines (xelatex, lualatex, pdflatex) in dieser Reihenfolge.
+
+### Mermaid CLI (für Diagramme, optional)
+
+Für automatische Konvertierung von Mermaid-Diagrammen:
+
+```bash
+npm install -g @mermaid-js/mermaid-cli
+```
+
+Verifizierung:
+```bash
+mmdc --version
+```
+
+**Hinweis**: Ohne Mermaid CLI werden Mermaid-Codeblöcke unverändert belassen.
 
 ## Installation
 
@@ -280,6 +296,49 @@ Die Metadaten werden an Pandoc als Variablen übergeben und können in Templates
 - Leere Werte werden ignoriert (nicht an Pandoc übergeben)
 
 **Beispiel**: Siehe `examples/example_with_yaml.md`
+
+## Mermaid-Diagramme
+
+Das Tool unterstützt Mermaid-Diagramme in Markdown-Dateien. Diese werden automatisch zu PNG-Bildern konvertiert:
+
+```markdown
+# Mein Dokument
+
+Hier ein Flowchart:
+
+```mermaid
+graph TD
+    A[Start] --> B{Entscheidung}
+    B -->|Ja| C[Ende]
+    B -->|Nein| D[Wiederholen]
+    D --> B
+```
+
+Hier ein Sequenzdiagramm:
+
+```mermaid
+sequenceDiagram
+    Alice->>Bob: Hallo Bob!
+    Bob-->>Alice: Hallo Alice!
+```
+```
+
+### Voraussetzung
+
+Mermaid CLI muss installiert sein:
+```bash
+npm install -g @mermaid-js/mermaid-cli
+```
+
+### Funktionsweise
+
+1. Markdown wird nach `mermaid` Codeblöcken durchsucht
+2. Jeder Block wird mit `mmdc` zu PNG gerendert
+3. Der Codeblock wird durch eine Bild-Referenz ersetzt
+4. Pandoc konvertiert das Dokument mit eingebetteten Bildern
+5. Temporäre Dateien werden automatisch aufgeräumt
+
+**Hinweis**: Ohne installiertes Mermaid CLI werden die Codeblöcke unverändert belassen (mit Warnung im Log).
 
 ## Preset-Profile
 

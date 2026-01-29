@@ -53,6 +53,44 @@ templates/                     # Platzhalter für Templates
 
 ## Feature-Ideen
 
+### Mermaid-Diagramm-Support 🎯 (In Arbeit)
+
+Mermaid-Codeblöcke in Markdown automatisch zu Bildern konvertieren.
+
+**Warum Mermaid?**
+- Textbasiert → Git-freundlich
+- Sehr weit verbreitet (GitHub, GitLab, Obsidian, VS Code, Notion)
+- Flowcharts, Sequenzdiagramme, ER-Diagramme, Gantt, etc.
+
+**Technische Umsetzung:**
+
+```
+Markdown mit Mermaid → Pre-Processing → Markdown mit Bildern → Pandoc → DOCX/PDF
+```
+
+| Schritt | Beschreibung |
+|---------|--------------|
+| 1. Scan | Markdown nach ```mermaid Codeblöcken durchsuchen |
+| 2. Render | Mit `mmdc` (Mermaid CLI) zu PNG rendern |
+| 3. Replace | Codeblock durch `![](temp/diagram.png)` ersetzen |
+| 4. Convert | Pandoc wie gewohnt ausführen |
+| 5. Cleanup | Temporäre Bilder löschen |
+
+**Ausgabeformat:**
+- PNG für DOCX (Word mag kein SVG)
+- PNG für PDF (zuverlässiger als SVG in LaTeX)
+
+**Voraussetzung:**
+```bash
+npm install -g @mermaid-js/mermaid-cli
+```
+
+**Dateien:**
+- `converter/mermaid_processor.py` - Mermaid-Verarbeitung
+- Integration in `converter_service.py`
+
+---
+
 ### Logo-Integration in Kopfzeile
 - Logo-Bild pro Profil oder global konfigurierbar
 - Position: links, mitte, rechts (einstellbar)

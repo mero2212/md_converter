@@ -1,11 +1,18 @@
 """Service layer for Markdown to DOCX conversion."""
 
 import logging
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from converter.errors import ConversionError, InvalidFileError
 from converter.frontmatter import parse_frontmatter
+from converter.mermaid_processor import (
+    cleanup_generated_images,
+    has_mermaid_diagrams,
+    is_mermaid_available,
+    process_mermaid_in_markdown,
+)
 from converter.pandoc_wrapper import PandocWrapper
 from converter.paths import get_output_filename, resolve_template_path
 from converter.profiles import Profile, get_profile
@@ -71,8 +78,45 @@ class ConverterService:
             )
 
         # Parse frontmatter
-        frontmatter, _ = parse_frontmatter(input_file)
+        frontmatter, content = parse_frontmatter(input_file)
         frontmatter_metadata = frontmatter.to_pandoc_variables() if frontmatter else {}
+
+        # Process Mermaid diagrams if present
+        mermaid_images: List[Path] = []
+        processed_input_file = input_file
+        temp_markdown_file: Optional[Path] = None
+
+        if has_mermaid_diagrams(content):
+            if is_mermaid_available():
+                logger.info("Processing Mermaid diagrams...")
+                # Create temp directory for images next to input file
+                mermaid_output_dir = input_file.parent / ".mermaid_temp"
+                try:
+                    processed_content, mermaid_images = process_mermaid_in_markdown(
+                        content,
+                        mermaid_output_dir,
+                        base_name=input_file.stem
+                    )
+
+                    if mermaid_images:
+                        # Create temp file with processed content
+                        temp_fd, temp_path = tempfile.mkstemp(
+                            suffix='.md',
+                            prefix='mermaid_',
+                            dir=input_file.parent
+                        )
+                        temp_markdown_file = Path(temp_path)
+                        with open(temp_fd, 'w', encoding='utf-8') as f:
+                            f.write(processed_content)
+                        processed_input_file = temp_markdown_file
+                        logger.info(f"Rendered {len(mermaid_images)} Mermaid diagram(s)")
+                except Exception as e:
+                    logger.warning(f"Mermaid processing failed, using original content: {e}")
+            else:
+                logger.warning(
+                    "Mermaid diagrams found but mmdc not installed. "
+                    "Install with: npm install -g @mermaid-js/mermaid-cli"
+                )
 
         # Merge metadata (explicit metadata overrides frontmatter)
         # Log overrides for transparency
@@ -151,7 +195,7 @@ class ConverterService:
 
         try:
             self.pandoc_wrapper.convert(
-                input_file=input_file,
+                input_file=processed_input_file,
                 output_file=output_file,
                 output_format=output_format,
                 template_file=resolved_template,
@@ -169,3 +213,19 @@ class ConverterService:
             error_msg = f"Unexpected error during conversion: {str(e)}"
             logger.error(error_msg)
             raise ConversionError(error_msg) from e
+        finally:
+            # Clean up Mermaid temporary files
+            if temp_markdown_file and temp_markdown_file.exists():
+                try:
+                    temp_markdown_file.unlink()
+                except OSError:
+                    pass
+            if mermaid_images:
+                cleanup_generated_images(mermaid_images)
+                # Try to remove temp directory if empty
+                mermaid_temp_dir = input_file.parent / ".mermaid_temp"
+                if mermaid_temp_dir.exists():
+                    try:
+                        mermaid_temp_dir.rmdir()
+                    except OSError:
+                        pass  # Directory not empty or other error

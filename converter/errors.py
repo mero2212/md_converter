@@ -41,3 +41,15 @@ class PDFEngineNotFoundError(ConverterError):
     """Raised when PDF engine (LaTeX) cannot be found."""
 
     pass
+
+
+class MermaidNotFoundError(ConverterError):
+    """Raised when Mermaid CLI (mmdc) is not installed."""
+
+    pass
+
+
+class MermaidRenderError(ConverterError):
+    """Raised when Mermaid diagram rendering fails."""
+
+    pass
