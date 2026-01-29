@@ -218,18 +218,18 @@ def handle_single_conversion(args: argparse.Namespace) -> int:
         Exit code (0 for success, non-zero for error).
     """
     if not args.input or not args.output:
-        print("✗ Error: Both input and output paths are required in single mode", file=sys.stderr)
+        print("[ERROR] Both input and output paths are required in single mode", file=sys.stderr)
         return 1
 
     # Parse and validate formats
     formats, error = parse_formats(args.formats, args.format)
     if error:
-        print(f"✗ Error: {error}", file=sys.stderr)
+        print(f"[ERROR] Error: {error}", file=sys.stderr)
         return 1
 
     output_path = Path(args.output)
     if output_path.exists() and output_path.is_dir():
-        print("✗ Error: Output path must be a file, not a directory", file=sys.stderr)
+        print("[ERROR] Error: Output path must be a file, not a directory", file=sys.stderr)
         return 1
 
     try:
@@ -257,15 +257,15 @@ def handle_single_conversion(args: argparse.Namespace) -> int:
             output_files.append(output_file)
 
         if len(output_files) == 1:
-            print(f"✓ Successfully converted {args.input} to {output_files[0]}")
+            print(f"[OK] Successfully converted {args.input} to {output_files[0]}")
         else:
-            print(f"✓ Successfully converted {args.input} to {len(output_files)} format(s):")
+            print(f"[OK] Successfully converted {args.input} to {len(output_files)} format(s):")
             for of in output_files:
                 print(f"  - {of}")
         return 0
 
     except PandocNotFoundError as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: {e}", file=sys.stderr)
         print(
             "\nPlease install Pandoc or specify the path using --pandoc-path",
             file=sys.stderr,
@@ -273,36 +273,36 @@ def handle_single_conversion(args: argparse.Namespace) -> int:
         return 1
 
     except InvalidFileError as e:
-        print(f"✗ Error: Invalid input file - {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Invalid input file - {e}", file=sys.stderr)
         return 1
 
     except FrontmatterError as e:
-        print(f"✗ Error: Frontmatter parsing failed - {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Frontmatter parsing failed - {e}", file=sys.stderr)
         return 1
 
     except ProfileError as e:
-        print(f"✗ Error: Profile error - {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Profile error - {e}", file=sys.stderr)
         return 1
 
     except PDFEngineNotFoundError as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: {e}", file=sys.stderr)
         return 1
 
     except MermaidRenderError as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: {e}", file=sys.stderr)
         return 1
 
     except ConversionError as e:
-        print(f"✗ Error: Conversion failed - {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Conversion failed - {e}", file=sys.stderr)
         return 1
 
     except KeyboardInterrupt:
-        print("\n✗ Conversion cancelled by user", file=sys.stderr)
+        print("\n[ERROR] Conversion cancelled by user", file=sys.stderr)
         return 130
 
     except Exception as e:
         logger.exception("Unexpected error occurred")
-        print(f"✗ Unexpected error: {e}", file=sys.stderr)
+        print(f"[ERROR] Unexpected error: {e}", file=sys.stderr)
         return 1
 
 
@@ -318,7 +318,7 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
     """
     if not args.input or not args.output:
         print(
-            "✗ Error: Both input and output directories are required in batch mode",
+            "[ERROR] Error: Both input and output directories are required in batch mode",
             file=sys.stderr,
         )
         return 1
@@ -329,25 +329,25 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
     # Parse and validate formats
     formats, error = parse_formats(args.formats, args.format)
     if error:
-        print(f"✗ Error: {error}", file=sys.stderr)
+        print(f"[ERROR] Error: {error}", file=sys.stderr)
         return 1
 
     if not input_dir.exists():
-        print(f"✗ Error: Input directory does not exist: {input_dir}", file=sys.stderr)
+        print(f"[ERROR] Error: Input directory does not exist: {input_dir}", file=sys.stderr)
         return 1
 
     if not input_dir.is_dir():
-        print(f"✗ Error: Input path is not a directory: {input_dir}", file=sys.stderr)
+        print(f"[ERROR] Error: Input path is not a directory: {input_dir}", file=sys.stderr)
         return 1
 
     if output_dir.exists() and not output_dir.is_dir():
-        print(f"✗ Error: Output path is not a directory: {output_dir}", file=sys.stderr)
+        print(f"[ERROR] Error: Output path is not a directory: {output_dir}", file=sys.stderr)
         return 1
 
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        print(f"✗ Error: Cannot create output directory: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Cannot create output directory: {e}", file=sys.stderr)
         return 1
 
     try:
@@ -374,7 +374,7 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
         return 0 if result.failed == 0 else 1
 
     except PandocNotFoundError as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: {e}", file=sys.stderr)
         print(
             "\nPlease install Pandoc or specify the path using --pandoc-path",
             file=sys.stderr,
@@ -382,28 +382,28 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
         return 1
 
     except ConversionError as e:
-        print(f"✗ Error: Batch conversion failed - {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Batch conversion failed - {e}", file=sys.stderr)
         return 1
 
     except ProfileError as e:
-        print(f"✗ Error: Profile error - {e}", file=sys.stderr)
+        print(f"[ERROR] Error: Profile error - {e}", file=sys.stderr)
         return 1
 
     except PDFEngineNotFoundError as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: {e}", file=sys.stderr)
         return 1
 
     except MermaidRenderError as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Error: {e}", file=sys.stderr)
         return 1
 
     except KeyboardInterrupt:
-        print("\n✗ Batch conversion cancelled by user", file=sys.stderr)
+        print("\n[ERROR] Batch conversion cancelled by user", file=sys.stderr)
         return 130
 
     except Exception as e:
         logger.exception("Unexpected error occurred")
-        print(f"✗ Unexpected error: {e}", file=sys.stderr)
+        print(f"[ERROR] Unexpected error: {e}", file=sys.stderr)
         return 1
 
 
