@@ -13,6 +13,7 @@ from converter.errors import (
     ConversionError,
     FrontmatterError,
     InvalidFileError,
+    MermaidRenderError,
     PandocNotFoundError,
     PDFEngineNotFoundError,
     ProfileError,
@@ -287,6 +288,10 @@ def handle_single_conversion(args: argparse.Namespace) -> int:
         print(f"✗ Error: {e}", file=sys.stderr)
         return 1
 
+    except MermaidRenderError as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
     except ConversionError as e:
         print(f"✗ Error: Conversion failed - {e}", file=sys.stderr)
         return 1
@@ -385,6 +390,10 @@ def handle_batch_conversion(args: argparse.Namespace) -> int:
         return 1
 
     except PDFEngineNotFoundError as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
+    except MermaidRenderError as e:
         print(f"✗ Error: {e}", file=sys.stderr)
         return 1
 

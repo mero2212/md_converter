@@ -92,7 +92,7 @@ Verifizierung:
 mmdc --version
 ```
 
-**Hinweis**: Ohne Mermaid CLI werden Mermaid-Codeblöcke unverändert belassen.
+**Hinweis**: Wenn Mermaid-Blöcke vorhanden sind und die Mermaid CLI fehlt, wird die Konvertierung mit einer klaren Fehlermeldung abgebrochen.
 
 ## Installation
 
@@ -299,7 +299,10 @@ Die Metadaten werden an Pandoc als Variablen übergeben und können in Templates
 
 ## Mermaid-Diagramme
 
-Das Tool unterstützt Mermaid-Diagramme in Markdown-Dateien. Diese werden automatisch zu PNG-Bildern konvertiert:
+Das Tool unterstützt Mermaid-Diagramme in Markdown-Dateien. Mermaid diagrams are pre-rendered before Pandoc conversion.
+Die Diagramme werden als SVG und PNG gerendert und je nach Zielformat eingebunden:
+- PDF → SVG
+- DOCX → PNG (300 dpi)
 
 ```markdown
 # Mein Dokument
@@ -333,12 +336,11 @@ npm install -g @mermaid-js/mermaid-cli
 ### Funktionsweise
 
 1. Markdown wird nach `mermaid` Codeblöcken durchsucht
-2. Jeder Block wird mit `mmdc` zu PNG gerendert
-3. Der Codeblock wird durch eine Bild-Referenz ersetzt
+2. Jeder Block wird mit `mmdc` zu SVG und PNG gerendert (`./_assets/diagrams/<hash>.*`)
+3. Der Codeblock wird durch eine Bild-Referenz ersetzt (formatabhängig)
 4. Pandoc konvertiert das Dokument mit eingebetteten Bildern
-5. Temporäre Dateien werden automatisch aufgeräumt
 
-**Hinweis**: Ohne installiertes Mermaid CLI werden die Codeblöcke unverändert belassen (mit Warnung im Log).
+**Hinweis**: Ohne installiertes Mermaid CLI wird die Konvertierung mit einer klaren Fehlermeldung abgebrochen.
 
 ## Preset-Profile
 

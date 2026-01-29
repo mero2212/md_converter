@@ -42,7 +42,7 @@ pytest tests/test_frontmatter.py::test_parse_valid_frontmatter  # single test
 - **converter/pandoc_wrapper.py** - Executes Pandoc subprocess, handles PDF engine detection, sanitizes metadata, validates output file creation
 - **converter/batch_service.py** - Iterates directories, handles filename collisions, aggregates results
 - **converter/frontmatter.py** - Parses YAML frontmatter from Markdown (custom parser, no PyYAML dependency, with UTF-8/latin-1 fallback)
-- **converter/mermaid_processor.py** - Converts Mermaid code blocks to PNG images using mmdc (Mermaid CLI)
+- **converter/mermaid_processor.py** - Converts Mermaid code blocks to SVG+PNG using mmdc, with hash-based caching in `_assets/diagrams/`
 - **converter/profiles.py** - Preset profiles (angebot, bericht, analyse, script) with default Pandoc args, templates, and naming patterns
 - **converter/paths.py** - Slugify, output filename generation, template path resolution
 - **converter/errors.py** - Exception hierarchy (ConverterError base, specific errors for Pandoc, PDF engine, frontmatter, profile, etc.)

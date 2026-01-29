@@ -12,6 +12,7 @@ from converter.converter_service import ConverterService
 from converter.errors import (
     ConversionError,
     FrontmatterError,
+    MermaidRenderError,
     PandocNotFoundError,
     PDFEngineNotFoundError,
     ProfileError,
@@ -161,6 +162,10 @@ def main() -> None:
                 st.write(str(e))
         except ConversionError as e:
             st.error("Konvertierung fehlgeschlagen.")
+            with st.expander("Details"):
+                st.write(str(e))
+        except MermaidRenderError as e:
+            st.error("Mermaid-Diagramme konnten nicht gerendert werden.")
             with st.expander("Details"):
                 st.write(str(e))
         except Exception as e:

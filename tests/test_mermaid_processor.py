@@ -1,15 +1,18 @@
 """Tests for Mermaid diagram processor."""
 
+import hashlib
 import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
+from converter.errors import MermaidRenderError
 from converter.mermaid_processor import (
     has_mermaid_diagrams,
     extract_mermaid_blocks,
     process_mermaid_in_markdown,
     is_mermaid_available,
     find_mermaid_cli,
+    render_mermaid_to_svg_and_png,
     MERMAID_PATTERN,
 )
 
@@ -167,13 +170,13 @@ class TestProcessMermaidInMarkdown:
     def test_returns_unchanged_when_no_mermaid(self, mock_find, tmp_path):
         content = "# Title\n\nNo diagrams here."
         processed, images = process_mermaid_in_markdown(
-            content, tmp_path, "test"
+            content, tmp_path, "docx"
         )
         assert processed == content
         assert images == []
 
     @patch('converter.mermaid_processor.find_mermaid_cli')
-    def test_returns_unchanged_when_mmdc_not_available(self, mock_find, tmp_path):
+    def test_raises_when_mmdc_not_available(self, mock_find, tmp_path):
         mock_find.return_value = None
         content = """# Title
 
@@ -182,22 +185,22 @@ graph TD
     A --> B
 ```
 """
-        processed, images = process_mermaid_in_markdown(
-            content, tmp_path, "test"
-        )
-        # Should return unchanged content with warning
-        assert processed == content
-        assert images == []
+        with pytest.raises(MermaidRenderError) as exc_info:
+            process_mermaid_in_markdown(
+                content, tmp_path, "docx"
+            )
+        assert "Mermaid CLI (mmdc) not found" in str(exc_info.value)
 
-    @patch('converter.mermaid_processor.render_mermaid_to_png')
+    @patch('converter.mermaid_processor.render_mermaid_to_svg_and_png')
     @patch('converter.mermaid_processor.find_mermaid_cli')
     def test_replaces_mermaid_block_with_image(self, mock_find, mock_render, tmp_path):
         mock_find.return_value = "/usr/local/bin/mmdc"
 
-        def create_dummy_image(diagram_code, output_path, *args, **kwargs):
-            output_path.write_bytes(b"PNG dummy data")
+        def create_dummy_images(diagram_code, svg_path, png_path, *args, **kwargs):
+            svg_path.write_text("<svg></svg>", encoding="utf-8")
+            png_path.write_bytes(b"PNG dummy data")
 
-        mock_render.side_effect = create_dummy_image
+        mock_render.side_effect = create_dummy_images
 
         content = """# Title
 
@@ -209,23 +212,26 @@ graph TD
 More text.
 """
         processed, images = process_mermaid_in_markdown(
-            content, tmp_path, "test"
+            content, tmp_path, "docx"
         )
 
         assert "```mermaid" not in processed
-        assert "![Diagram 1]" in processed
-        assert len(images) == 1
-        assert images[0].suffix == ".png"
+        assert "![](_assets/diagrams/" in processed
+        assert ".png)" in processed
+        assert len(images) == 2
+        assert any(p.suffix == ".png" for p in images)
+        assert any(p.suffix == ".svg" for p in images)
 
-    @patch('converter.mermaid_processor.render_mermaid_to_png')
+    @patch('converter.mermaid_processor.render_mermaid_to_svg_and_png')
     @patch('converter.mermaid_processor.find_mermaid_cli')
     def test_processes_multiple_diagrams(self, mock_find, mock_render, tmp_path):
         mock_find.return_value = "/usr/local/bin/mmdc"
 
-        def create_dummy_image(diagram_code, output_path, *args, **kwargs):
-            output_path.write_bytes(b"PNG dummy data")
+        def create_dummy_images(diagram_code, svg_path, png_path, *args, **kwargs):
+            svg_path.write_text("<svg></svg>", encoding="utf-8")
+            png_path.write_bytes(b"PNG dummy data")
 
-        mock_render.side_effect = create_dummy_image
+        mock_render.side_effect = create_dummy_images
 
         content = """# Title
 
@@ -242,13 +248,80 @@ sequenceDiagram
 ```
 """
         processed, images = process_mermaid_in_markdown(
-            content, tmp_path, "test"
+            content, tmp_path, "docx"
         )
 
         assert "```mermaid" not in processed
-        assert "![Diagram 1]" in processed
-        assert "![Diagram 2]" in processed
-        assert len(images) == 2
+        assert processed.count("![](_assets/diagrams/") == 2
+        assert len(images) == 4
+
+    @patch('converter.mermaid_processor.render_mermaid_to_svg_and_png')
+    @patch('converter.mermaid_processor.find_mermaid_cli')
+    def test_format_selection_pdf_vs_docx(self, mock_find, mock_render, tmp_path):
+        mock_find.return_value = "/usr/local/bin/mmdc"
+
+        def create_dummy_images(diagram_code, svg_path, png_path, *args, **kwargs):
+            svg_path.write_text("<svg></svg>", encoding="utf-8")
+            png_path.write_bytes(b"PNG dummy data")
+
+        mock_render.side_effect = create_dummy_images
+
+        content = """```mermaid
+graph TD
+    A --> B
+```"""
+
+        processed_docx, _ = process_mermaid_in_markdown(
+            content, tmp_path, "docx"
+        )
+        processed_pdf, _ = process_mermaid_in_markdown(
+            content, tmp_path, "pdf"
+        )
+
+        assert processed_docx.endswith(".png)")
+        assert processed_pdf.endswith(".svg)")
+
+
+class TestMermaidCaching:
+    """Tests for hash-based caching behavior."""
+
+    @patch('converter.mermaid_processor._run_mermaid_cli')
+    def test_skips_render_when_outputs_exist(self, mock_run, tmp_path):
+        svg_path = tmp_path / "diagram.svg"
+        png_path = tmp_path / "diagram.png"
+        svg_path.write_text("<svg></svg>", encoding="utf-8")
+        png_path.write_bytes(b"PNG")
+
+        render_mermaid_to_svg_and_png(
+            "graph TD\n  A --> B",
+            svg_path,
+            png_path,
+            mmdc_path="mmdc"
+        )
+
+        mock_run.assert_not_called()
+
+    @patch('converter.mermaid_processor.render_mermaid_to_svg_and_png')
+    @patch('converter.mermaid_processor.find_mermaid_cli')
+    def test_uses_hash_based_filenames(self, mock_find, mock_render, tmp_path):
+        mock_find.return_value = "/usr/local/bin/mmdc"
+
+        def create_dummy_images(diagram_code, svg_path, png_path, *args, **kwargs):
+            svg_path.write_text("<svg></svg>", encoding="utf-8")
+            png_path.write_bytes(b"PNG")
+
+        mock_render.side_effect = create_dummy_images
+
+        content = """```mermaid
+graph TD
+    A --> B
+```"""
+
+        processed, _ = process_mermaid_in_markdown(content, tmp_path, "docx")
+
+        diagram_code = "graph TD\n    A --> B"
+        expected_hash = hashlib.sha256(diagram_code.encode("utf-8")).hexdigest()
+        assert f"_assets/diagrams/{expected_hash}.png" in processed
 
 
 class TestMermaidPattern:
