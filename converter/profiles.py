@@ -23,6 +23,7 @@ class Profile:
         default_formats: Optional[List[str]] = None,
         toc: bool = False,
         number_sections: bool = False,
+        landscape_sections: Optional[List] = None,
     ):
         """
         Initialize a profile.
@@ -46,6 +47,7 @@ class Profile:
         self.default_formats = default_formats or ["docx"]
         self.toc = toc
         self.number_sections = number_sections
+        self.landscape_sections = landscape_sections or []
 
         # Build pandoc_args from settings
         self.pandoc_args = list(pandoc_args or [])

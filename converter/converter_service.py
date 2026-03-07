@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 from converter.errors import ConversionError, InvalidFileError
 from converter.frontmatter import parse_frontmatter
+from converter.landscape_processor import apply_landscape_sections
 from converter.mermaid_processor import (
     has_mermaid_diagrams,
     process_mermaid_in_markdown,
@@ -189,6 +190,26 @@ class ConverterService:
                 additional_args=pandoc_args if pandoc_args else None,
                 pdf_engine=pdf_engine,
             )
+
+            # Post-processing: apply landscape sections if profile defines them
+            if (
+                profile
+                and profile.landscape_sections
+                and output_format == "docx"
+                and output_file.exists()
+            ):
+                try:
+                    applied = apply_landscape_sections(
+                        output_file, profile.landscape_sections
+                    )
+                    if applied:
+                        logger.info("Landscape sections applied successfully")
+                except Exception as e:
+                    logger.warning(
+                        f"Landscape post-processing failed: {e}. "
+                        f"DOCX was saved without landscape sections."
+                    )
+
             logger.info(
                 f"Successfully converted {input_file.name} to {output_file.name}"
             )

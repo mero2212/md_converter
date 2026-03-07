@@ -87,6 +87,45 @@ pytest tests/test_profiles.py -v          # specific file
 pytest -k "test_parse"                    # pattern match
 ```
 
+## Critical Rules
+
+### Never Do
+- Modify dependencies (setup.py, requirements) without asking
+- Implement multiple features in one prompt
+- Make assumptions — use concrete facts only
+- Continue working when errors occur without analysis
+- Change files in `local/` (gitignored company templates)
+- Commit `local_profiles.py` or `create_templates.py` (contain company data)
+
+### Always Do
+- Analyze and show code before making changes
+- Work on only one thing per prompt
+- Check that `mdconv --help` runs after each change
+- Run `pytest` after every code change
+- Show concrete error messages from console/terminal
+- Stop immediately when problems occur and ask
+
+### After Each Step
+1. Save files
+2. Run `pytest` (mocks Pandoc — no installation needed for tests)
+3. Test CLI: `mdconv test.md test.docx`
+4. Recommend git commit on success
+
+### When Errors Occur
+1. **STOP** — no further changes
+2. Copy exact error message
+3. Show affected files
+4. Wait for instructions
+
+## Known Pitfalls & Lessons Learned
+
+- **Metadata Precedence**: CLI args override frontmatter values. Never change this priority — it's by design.
+- **PDF Engine Detection**: System tries xelatex → lualatex → pdflatex in order. If PDF export fails, check LaTeX installation first.
+- **Mermaid Processing**: mmdc (Mermaid CLI) is optional. Code must handle its absence gracefully — never crash if mmdc is not installed.
+- **Encoding Fallback**: frontmatter.py tries UTF-8 first, then falls back to latin-1. Don't simplify this — real-world Markdown files from Windows have mixed encodings.
+- **Mock Side Effects in Tests**: Test mocks must create output files, otherwise validation tests fail (converter checks file existence + size > 0).
+- **Brawema Templates**: Corporate design (Header #0076BE, Calibri font, "VERTRAULICH" footer) lives in `local/` and is never committed.
+
 ## Configuration
 
 Environment variables:
